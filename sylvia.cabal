@@ -11,8 +11,8 @@ Description:
     It is an implementation of an idea by Keenan (1996). See
     <http://dkeenan.com/Lambda> for the theory behind this application.
 
-Homepage:            https://github.com/chrisyco/saliva
-Bug-Reports:         https://github.com/chrisyco/saliva/issues
+Homepage:            https://github.com/chrisyco/sylvia
+Bug-Reports:         https://github.com/chrisyco/sylvia/issues
 
 Author:              Chris Wong
 Maintainer:          chrisyco@gmail.com
@@ -26,7 +26,7 @@ Extra-Source-Files:  README.markdown
 Cabal-Version:       >= 1.8
 
 
-Executable saliva
+Executable sylvia
     Main-Is: Main.hs
     Build-Depends:
           base == 4.*
