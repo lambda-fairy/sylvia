@@ -1,0 +1,32 @@
+Name:                sylvia
+Version:             0
+Synopsis:            Lambda calculus visualization
+Category:            Game
+
+Description:
+    The Simple Yuser-friendly Lambda Visualization Interaction Application (SYLVIA)
+    is a unique way to manipulate untyped lambda calculus expressions, by
+    representing them as boxes connected by wires.
+    .
+    It is an implementation of an idea by Keenan (1996). See
+    <http://dkeenan.com/Lambda> for the theory behind this application.
+
+Homepage:            https://github.com/chrisyco/saliva
+Bug-Reports:         https://github.com/chrisyco/saliva/issues
+
+Author:              Chris Wong
+Maintainer:          chrisyco@gmail.com
+
+License:             GPL
+License-File:        LICENSE
+Copyright:           2011 Chris Wong
+
+Build-Type:          Simple
+Extra-Source-Files:  README.markdown
+Cabal-Version:       >= 1.8
+
+
+Executable saliva
+    Main-Is: Main.hs
+    Build-Depends:
+          base == 4.*
