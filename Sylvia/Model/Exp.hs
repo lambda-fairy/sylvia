@@ -18,8 +18,9 @@ module Sylvia.Model.Exp
 
     -- * Abstracting and applying
     , abstractName
+    , matchName
     , abstractIndex
-    , match
+    , matchIndex
     , apply
     , subst
 
@@ -139,13 +140,13 @@ matchName x y = if x == y then O else S y
 
 abstractIndex
     :: Integral a
-    -> Exp a
+    => Exp a
     -> Exp a
 abstractIndex = Lam . mapE (matchIndex 0)
 
 matchIndex
     :: Integral a
-    -> a     -- ^ @0@ if using zero-based indices, otherwise @1@
+    => a     -- ^ @0@ if using zero-based indices, otherwise @1@
     -> a     -- ^ Index to check
     -> Inc a -- ^ Result
 matchIndex zero index
