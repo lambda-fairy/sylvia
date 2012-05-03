@@ -17,7 +17,8 @@ module Sylvia.Model.Exp
     , Exp(..)
 
     -- * Abstracting and applying
-    , abstract
+    , abstractName
+    , abstractIndex
     , match
     , apply
     , subst
@@ -48,6 +49,7 @@ import Data.Functor ( Functor(..), (<$>) )
 data Inc a
     = O   -- ^ Zero
     | S a -- ^ Add one
+  deriving (Eq, Ord, Read, Show)
 
 instance Functor Inc where
     fmap = mapI
@@ -81,6 +83,7 @@ data Exp a
     | Lam (Exp (Inc a))
     -- | Function application.
     | App (Exp a) (Exp a)
+  deriving (Eq, Ord, Read, Show)
 
 instance Functor Exp where
     fmap = mapE
@@ -115,24 +118,40 @@ distE (S x) = mapE S x
 
 -- | Create a lambda abstraction by replacing a value with a reference to
 -- the function's argument.
-abstract
+abstractName
     :: Eq a
     => a     -- ^ Argument name
     -> Exp a -- ^ Function body
     -> Exp a -- ^ Result
-abstract x = Lam . mapE (match x)
+abstractName x = Lam . mapE (matchName x)
 
 -- | If the value matches, return 'O'; otherwise, shift the value up by
 -- one.
 --
--- This is the inverse of 'subst': for any value of @x@,
--- @subst x . match x === id@
-match
+-- This is the inverse of 'substName': for any value of @x@,
+-- @substName x . matchName x === id@
+matchName
     :: Eq a
     => a     -- ^ Value to replace
     -> a     -- ^ Value to check
     -> Inc a -- ^ Result
-match x y = if x == y then O else S y
+matchName x y = if x == y then O else S y
+
+abstractIndex
+    :: Integral a
+    -> Exp a
+    -> Exp a
+abstractIndex = Lam . mapE (matchIndex 0)
+
+matchIndex
+    :: Integral a
+    -> a     -- ^ @0@ if using zero-based indices, otherwise @1@
+    -> a     -- ^ Index to check
+    -> Inc a -- ^ Result
+matchIndex zero index
+  | index >  zero = S (index - 1)
+  | index == zero = O
+  | otherwise = error "matchIndex: index out of range"
 
 -- | Substitute a value into a function.
 apply
