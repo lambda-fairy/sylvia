@@ -13,7 +13,7 @@ module Sylvia.Text.Parser
 
 import Control.Applicative
 import Text.Parsec hiding ( (<|>), many )
-import Sylvia.Model.Exp
+import Sylvia.Model
 
 parseExp :: String -> Either ParseError (Exp Integer)
 parseExp = parse expression' "sylvia"
