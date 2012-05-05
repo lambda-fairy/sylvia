@@ -16,24 +16,25 @@ module Sylvia.Model
       Inc(..)
     , Exp(..)
 
-    -- * Abstracting and applying
+    -- * Abstracting
     , abstractName
-    , matchName
     , abstractIndex
+    , verify
+
+    -- * Applying
+    , matchName
     , matchIndex
     , apply
     , subst
-
-    -- * Functor and monad operations
-    , mapI
-    , joinI
-    , mapE
-    , joinE
     ) where
 
 import Control.Applicative ( Applicative(..) )
 import Control.Monad ( Monad(..), ap )
+import Data.Foldable ( Foldable(foldMap) )
 import Data.Functor ( Functor(..), (<$>) )
+import Data.Monoid ( Monoid(..) )
+import Data.Traversable ( Traversable(traverse) )
+import Data.Void ( Void )
 
 -- | A structure for representing whole numbers.
 --
@@ -60,6 +61,14 @@ instance Applicative Inc where
 instance Monad Inc where
     return = S
     val >>= f = joinI (mapI f val)
+
+instance Foldable Inc where
+    foldMap f O = mempty
+    foldMap f (S x) = f x
+
+instance Traversable Inc where
+    traverse f O = pure O
+    traverse f (S x) = S <$> f x
 
 -- | Apply a function to the value inside the 'Inc', if it has one.
 mapI :: (a -> b) -> Inc a -> Inc b
@@ -95,6 +104,18 @@ instance Monad Exp where
     return = Ref
     exp >>= f = joinE (mapE f exp)
 
+instance Foldable Exp where
+    foldMap f exp = case exp of
+        Ref x   -> f x
+        Lam e   -> foldMap (foldMap f) e
+        App a b -> foldMap f a `mappend` foldMap f b
+
+instance Traversable Exp where
+    traverse f exp = case exp of
+        Ref x   -> Ref <$> f x
+        Lam e   -> Lam <$> traverse (traverse f) e
+        App a b -> App <$> traverse f a <*> traverse f b
+
 -- | Apply a function to every leaf value in the tree.
 mapE :: (a -> b) -> Exp a -> Exp b
 mapE f exp = case exp of
@@ -114,6 +135,9 @@ joinE exp = case exp of
 distE :: Inc (Exp a) -> Exp (Inc a)
 distE O = Ref O
 distE (S x) = mapE S x
+
+verify :: Exp a -> Maybe (Exp Void)
+verify = traverse (const Nothing)
 
 -- | Create a lambda abstraction by replacing a value with a reference to
 -- the function's argument.

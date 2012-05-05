@@ -30,5 +30,5 @@ Executable sylvia
     Main-Is: Main.hs
     Build-Depends:
           base   == 4.*
-        , void   >= 0.4   && < 0.6 -- 0.5 adds Semigroup instance, which Sylvia doesn't use
+        , void   >= 0.5.5 && < 0.6
         , parsec >= 3.1.2 && < 3.2
