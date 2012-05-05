@@ -1,11 +1,11 @@
 -- |
--- Module      : Sylvia.Parser
+-- Module      : Sylvia.Text.Parser
 -- Copyright   : GPLv3
 --
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : portable
 
-module Sylvia.Parser
+module Sylvia.Text.Parser
     (
       parseExp
     , ParseError
