@@ -1,16 +1,16 @@
 {-# LANGUAGE Rank2Types #-}
 
 -- |
--- Module      : Sylvia.Model.Exp
+-- Module      : Sylvia.Model
 -- Copyright   : GPLv3
 --
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : portable (Rank2Types)
 --
 -- The 'Exp' data type, for representing lambda expressions using De Bruijn
--- indices.
+-- indices, plus basic abstraction and application operations.
 
-module Sylvia.Model.Exp
+module Sylvia.Model
     (
     -- * Types
       Inc(..)
@@ -24,13 +24,11 @@ module Sylvia.Model.Exp
     , apply
     , subst
 
-    -- * Mapping and folding
+    -- * Functor and monad operations
     , mapI
     , joinI
     , mapE
     , joinE
-    , foldE
-    , gfoldE
     ) where
 
 import Control.Applicative ( Applicative(..) )
@@ -129,8 +127,8 @@ abstractName x = Lam . mapE (matchName x)
 -- | If the value matches, return 'O'; otherwise, shift the value up by
 -- one.
 --
--- This is the inverse of 'substName': for any value of @x@,
--- @substName x . matchName x === id@
+-- This is the inverse of 'subst': for any value of @x@,
+-- @subst x . matchName x === id@
 matchName
     :: Eq a
     => a     -- ^ Value to replace
@@ -138,20 +136,23 @@ matchName
     -> Inc a -- ^ Result
 matchName x y = if x == y then O else S y
 
+-- | Create a lambda abstraction by linking up any de Bruijn indices
+-- that match the lambda.
 abstractIndex
     :: Integral a
     => Exp a
     -> Exp a
-abstractIndex = Lam . mapE (matchIndex 0)
+abstractIndex = Lam . mapE matchIndex
 
+-- | Shift a de Bruijn index down by one. If it falls below zero,
+-- replace it with 'O'.
 matchIndex
     :: Integral a
-    => a     -- ^ @0@ if using zero-based indices, otherwise @1@
-    -> a     -- ^ Index to check
+    => a     -- ^ Index to check
     -> Inc a -- ^ Result
-matchIndex zero index
-  | index >  zero = S (index - 1)
-  | index == zero = O
+matchIndex index
+  | index >  0 = S (index - 1)
+  | index == 0 = O
   | otherwise = error "matchIndex: index out of range"
 
 -- | Substitute a value into a function.
@@ -164,38 +165,11 @@ apply e = joinE . mapE (subst e . mapI Ref)
 -- | Shift an 'Inc' down by one. If it falls below zero, replace it with
 -- the value.
 --
--- This is the inverse of 'match': for any value of @x@,
--- @subst x . match x === id@
+-- This is the inverse of the @matchX@ functions: for any value of @x@,
+-- @subst x . matchName x === id@ and @subst x . matchIndex x === id@.
 subst
     :: a     -- ^ Replacement value
     -> Inc a -- ^ Value to shift
     -> a     -- ^ Result
 subst x O = x
 subst x (S y) = y
-
--- | Reduce an expression to a summary value, by replacing each node with
--- a function.
-foldE
-    :: (forall a. a -> t a)          -- ^ How to reduce a 'Ref'
-    -> (forall a. t (Inc a) -> t a)  -- ^ 'Lam'
-    -> (forall a. t a -> t a -> t a) -- ^ 'App'
-    -> Exp b -> t b
-foldE fr fl fa exp = case exp of
-    Ref x   -> fr x
-    Lam e   -> fl (recurse e)
-    App a b -> fa (recurse a) (recurse b)
-  where
-    recurse = foldE fr fl fa
-
-gfoldE
-    :: (forall a. t a -> f a)
-    -> (forall a. f (Inc a) -> f a)
-    -> (forall a. f a -> f a -> f a)
-    -> (forall a. Inc (t a) -> t (Inc a))
-    -> Exp (t b) -> f b
-gfoldE fr fl fa fk exp = case exp of
-    Ref x   -> fr x
-    Lam e   -> fl (recurse $ mapE fk e)
-    App a b -> fa (recurse a) (recurse b)
-  where
-    recurse = gfoldE fr fl fa fk
