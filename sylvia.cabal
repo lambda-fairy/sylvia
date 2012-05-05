@@ -29,4 +29,6 @@ Cabal-Version:       >= 1.8
 Executable sylvia
     Main-Is: Main.hs
     Build-Depends:
-          base == 4.*
+          base   == 4.*
+        , void   >= 0.4   && < 0.6 -- 0.5 adds Semigroup instance, which Sylvia doesn't use
+        , parsec >= 3.1.2 && < 3.2
