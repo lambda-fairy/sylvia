@@ -12,27 +12,32 @@ module Sylvia.Text.Parser
     ) where
 
 import Control.Applicative
+import Data.Void ( Void )
 import Text.Parsec hiding ( (<|>), many )
 import Sylvia.Model
 
-parseExp :: String -> Either ParseError (Exp Integer)
+parseExp :: String -> Either ParseError (Exp Void)
 parseExp = parse expression' "sylvia"
   where
-    expression' = expression <* spaces -- Skip trailing spaces
+    expression' = verify' <$> expression 0 <* spaces -- Skip trailing spaces
 
 type Parser = Parsec String ()
 
-expression, term, bracketed, reference, abstraction :: Parser (Exp Integer)
+expression, term, bracketed, reference, abstraction :: Integer -> Parser (Exp Integer)
 
-expression = foldl1 App <$> many1 term
+expression i = foldl1 App <$> many1 (term i)
 
-term = try spaces *> (bracketed <|> reference <|> abstraction)
+term i = try spaces *> (bracketed i <|> reference i <|> abstraction i)
 
-bracketed = char '(' *> expression <* spaces <* char ')'
+bracketed i = char '(' *> expression i <* spaces <* char ')'
     <?> "bracketed term"
 
-reference = Ref . read <$> many1 digit
+reference i = Ref <$> (checkInRange =<< read <$> many1 digit)
     <?> "de Bruijn index"
+  where
+    checkInRange index
+      | index < i = return index
+      | otherwise = fail $ "index " ++ show index ++ " out of range"
 
-abstraction = abstractIndex <$> (char '\\' *> expression)
+abstraction i = abstractIndex <$> (char '\\' *> expression (i+1))
     <?> "lambda abstraction"

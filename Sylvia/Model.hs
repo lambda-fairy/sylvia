@@ -20,6 +20,7 @@ module Sylvia.Model
     , abstractName
     , abstractIndex
     , verify
+    , verify'
 
     -- * Applying
     , matchName
@@ -136,8 +137,17 @@ distE :: Inc (Exp a) -> Exp (Inc a)
 distE O = Ref O
 distE (S x) = mapE S x
 
+-- | Check there are no references to free variables in the given
+-- expression. If there are none, return Just the expression; otherwise,
+-- return Nothing.
 verify :: Exp a -> Maybe (Exp Void)
 verify = traverse (const Nothing)
+
+-- | Like 'verify', but chucks an error instead of returning Nothing.
+verify' :: Exp a -> Exp Void
+verify' exp = case verify exp of
+    Just res -> res
+    Nothing  -> error "Sylvia.Model.verify': invalid expression"
 
 -- | Create a lambda abstraction by replacing a value with a reference to
 -- the function's argument.
