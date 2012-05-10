@@ -16,17 +16,19 @@ module Sylvia.Model
       Inc(..)
     , Exp(..)
 
-    -- * Abstracting
-    , abstractName
-    , abstractIndex
+    -- * Conversions
     , verify
     , verify'
 
+    -- * Abstracting
+    , abstract
+    , match
+    , shiftUp
+
     -- * Applying
-    , matchName
-    , matchIndex
     , apply
     , subst
+    , shiftDown
     ) where
 
 import Control.Applicative ( Applicative(..) )
@@ -149,47 +151,39 @@ verify' exp = case verify exp of
     Just res -> res
     Nothing  -> error "Sylvia.Model.verify': invalid expression"
 
--- | Create a lambda abstraction by replacing a value with a reference to
--- the function's argument.
-abstractName
-    :: Eq a
-    => a     -- ^ Argument name
-    -> Exp a -- ^ Function body
-    -> Exp a -- ^ Result
-abstractName x = Lam . mapE (matchName x)
-
--- | If the value matches, return 'O'; otherwise, shift the value up by
--- one.
+-- | Create a lambda abstraction.
 --
--- This is the inverse of 'subst': for any value of @x@,
--- @subst x . matchName x === id@
-matchName
+-- If you are using variable names as identifiers, use:
+-- > abstract (match "foo")
+--
+-- If you are using de Bruijn indices, use:
+-- > abstract shiftUp
+abstract
+    :: (a -> Inc a) -- ^ Matching function
+    -> Exp a        -- ^ Function body
+    -> Exp a        -- ^ Result
+abstract f = Lam . mapE f
+
+match
     :: Eq a
     => a     -- ^ Value to replace
     -> a     -- ^ Value to check
     -> Inc a -- ^ Result
-matchName x y = if x == y then O else S y
+match x y = if x == y then O else S y
 
--- | Create a lambda abstraction by linking up any de Bruijn indices
--- that match the lambda.
-abstractIndex
-    :: Integral a
-    => Exp a
-    -> Exp a
-abstractIndex = Lam . mapE matchIndex
-
--- | Shift a de Bruijn index down by one. If it falls below zero,
--- replace it with 'O'.
-matchIndex
+-- | Add one layer of 'Inc', decrementing the index inside.
+--
+-- This is the inverse of 'shiftDown'.
+shiftUp
     :: Integral a
     => a     -- ^ Index to check
     -> Inc a -- ^ Result
-matchIndex index
+shiftUp index
   | index >  0 = S (index - 1)
   | index == 0 = O
   | otherwise = error "matchIndex: index out of range"
 
--- | Substitute a value into a function.
+-- | Substitute a value into the body of a function.
 apply
     :: Exp a       -- ^ Argument value
     -> Exp (Inc a) -- ^ Function body
@@ -199,11 +193,24 @@ apply e = joinE . mapE (subst e . mapI Ref)
 -- | Shift an 'Inc' down by one. If it falls below zero, replace it with
 -- the value.
 --
--- This is the inverse of the @matchX@ functions: for any value of @x@,
--- @subst x . matchName x === id@ and @subst x . matchIndex x === id@.
+-- This is the inverse of 'match': for any value of @x@,
+-- @subst x . match x === id@.
 subst
     :: a     -- ^ Replacement value
     -> Inc a -- ^ Value to shift
     -> a     -- ^ Result
 subst x O = x
 subst x (S y) = y
+
+-- | Remove one layer of 'Inc', incrementing the index inside.
+--
+-- In "Sylvia.Text.PrettyPrint", this is used to get the original
+-- indices from the structure.
+--
+-- This is the inverse of 'shiftUp'.
+shiftDown
+    :: Integral a
+    => Inc a
+    -> a
+shiftDown O = 0
+shiftDown (S index) = index + 1

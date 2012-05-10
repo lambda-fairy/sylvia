@@ -65,5 +65,5 @@ reference i = Ref <$> (checkInRange =<< read <$> many1 digit)
       | otherwise = fail $ "index " ++ show index ++ " out of range"
 
 -- A lambda expression: a backslash, followed by the function body.
-abstraction i = abstractIndex <$> (char '\\' *> expression (i+1))
+abstraction i = abstract shiftUp <$> (char '\\' *> expression (i+1))
     <?> "lambda abstraction"
