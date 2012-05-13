@@ -23,7 +23,7 @@ pprint :: Exp Integer -> ShowS
 pprint exp = case exp of
     Ref a   -> shows a
     Lam e   -> str "(\\ " . pprint (flatten e) . str ")"
-    App a b -> pprint a . str " " . pprint b
+    App a b -> str "(". pprint a . str ") (" . pprint b . str ")"
 
 flatten :: Exp (Inc Integer) -> Exp Integer
 flatten = fmap shiftDown
