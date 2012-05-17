@@ -5,7 +5,6 @@ import Data.Void ( Void )
 
 import Test.Framework
 import Test.Framework.Providers.SmallCheck
-import Test.SmallCheck
 import Test.SmallCheck.Series
 
 import Sylvia.Model
@@ -39,18 +38,26 @@ instance Serial a => Serial (Exp a) where
                     , h <- alts2 rs d
                     ]
 
--- | @parse . pprint == id@
-prop_roundtrip :: Exp Void -> Bool
-prop_roundtrip orig = isJust $ do
+-- | Converting an expression to a string, then back again should result
+-- in the same expression.
+prop_parse_pprint :: Exp Void -> Bool
+prop_parse_pprint orig = isJust $ do
     new <- eitherToMaybe . parseExp . pprintExp $ orig
     guard $ orig == new
+  where
+    eitherToMaybe = either (const Nothing) Just
 
-eitherToMaybe :: Either l r -> Maybe r
-eitherToMaybe = either (const Nothing) Just
+prop_subst_match :: Int -> Int -> Bool
+prop_subst_match x y = (subst x . match x) y == y
+
+prop_shiftDown_shiftUp :: N Int -> Bool
+prop_shiftDown_shiftUp (N x) = (shiftDown . shiftUp) x == x
 
 main :: IO ()
 main = defaultMain $ map (plusTestOptions options)
-    [ testProperty "roundtrip" prop_roundtrip
+    [ testProperty "parse.pprint" prop_parse_pprint
+    , testProperty "subst.match" prop_subst_match
+    , testProperty "shiftDown.shiftUp" prop_shiftDown_shiftUp
     ]
 
 options :: TestOptions
