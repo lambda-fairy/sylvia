@@ -32,9 +32,9 @@ module Sylvia.Model
     ) where
 
 import Control.Applicative ( Applicative(..) )
-import Control.Monad ( Monad(..), ap )
+import Control.Monad ( ap )
 import Data.Foldable ( Foldable(foldMap) )
-import Data.Functor ( Functor(..), (<$>) )
+import Data.Functor ( (<$>) )
 import Data.Monoid ( Monoid(..) )
 import Data.Traversable ( Traversable(traverse) )
 import Data.Void ( Void )
@@ -66,16 +66,16 @@ instance Monad Inc where
     val >>= f = joinI (mapI f val)
 
 instance Foldable Inc where
-    foldMap f O = mempty
+    foldMap _ O = mempty
     foldMap f (S x) = f x
 
 instance Traversable Inc where
-    traverse f O = pure O
+    traverse _ O = pure O
     traverse f (S x) = S <$> f x
 
 -- | Apply a function to the value inside the 'Inc', if it has one.
 mapI :: (a -> b) -> Inc a -> Inc b
-mapI f O = O
+mapI _ O = O
 mapI f (S x) = S (f x)
 
 -- | Remove one layer of nesting, projecting the inner value onto the outside.
@@ -105,32 +105,32 @@ instance Applicative Exp where
 
 instance Monad Exp where
     return = Ref
-    exp >>= f = joinE (mapE f exp)
+    e >>= f = joinE (mapE f e)
 
 instance Foldable Exp where
-    foldMap f exp = case exp of
+    foldMap f e = case e of
         Ref x   -> f x
-        Lam e   -> foldMap (foldMap f) e
+        Lam e'  -> foldMap (foldMap f) e'
         App a b -> foldMap f a `mappend` foldMap f b
 
 instance Traversable Exp where
-    traverse f exp = case exp of
+    traverse f e = case e of
         Ref x   -> Ref <$> f x
-        Lam e   -> Lam <$> traverse (traverse f) e
+        Lam e'  -> Lam <$> traverse (traverse f) e'
         App a b -> App <$> traverse f a <*> traverse f b
 
 -- | Apply a function to every leaf value in the tree.
 mapE :: (a -> b) -> Exp a -> Exp b
-mapE f exp = case exp of
+mapE f e = case e of
     Ref x   -> Ref (f x)
-    Lam e   -> Lam (mapE (mapI f) e)
+    Lam e'  -> Lam (mapE (mapI f) e')
     App a b -> App (mapE f a) (mapE f b)
 
 -- | Flatten a nested expression by gluing its nodes onto the main tree.
 joinE :: Exp (Exp a) -> Exp a
-joinE exp = case exp of
+joinE e = case e of
     Ref x   -> x
-    Lam e   -> Lam (joinE (mapE distE e))
+    Lam e'  -> Lam (joinE (mapE distE e'))
     App a b -> App (joinE a) (joinE b)
 
 -- | Convert a wrapped-up expression into an expression with wrapped-up
@@ -147,7 +147,7 @@ verify = traverse (const Nothing)
 
 -- | Like 'verify', but chucks an error instead of returning Nothing.
 verify' :: Exp a -> Exp Void
-verify' exp = case verify exp of
+verify' e = case verify e of
     Just res -> res
     Nothing  -> error "Sylvia.Model.verify': invalid expression"
 
@@ -200,7 +200,7 @@ subst
     -> Inc a -- ^ Value to shift
     -> a     -- ^ Result
 subst x O = x
-subst x (S y) = y
+subst _ (S y) = y
 
 -- | Remove one layer of 'Inc', incrementing the index inside.
 --

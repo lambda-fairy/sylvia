@@ -20,9 +20,9 @@ pprintExp :: Exp Void -> String
 pprintExp = ($ "") . pprint . vacuous
 
 pprint :: Exp Integer -> ShowS
-pprint exp = case exp of
+pprint e = case e of
     Ref a   -> shows a
-    Lam e   -> str "(\\ " . pprint (flatten e) . str ")"
+    Lam e'  -> str "(\\ " . pprint (flatten e') . str ")"
     App a b -> str "(". pprint a . str ") (" . pprint b . str ")"
 
 flatten :: Exp (Inc Integer) -> Exp Integer
