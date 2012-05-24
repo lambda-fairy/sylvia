@@ -29,6 +29,9 @@ module Sylvia.Model
     , apply
     , subst
     , shiftDown
+
+    -- * Simplifying
+    , evalHNF
     ) where
 
 import Control.Applicative ( Applicative(..) )
@@ -214,3 +217,18 @@ shiftDown
     -> a
 shiftDown O = 0
 shiftDown (S index) = index + 1
+
+-- | Evaluate an expression to head normal form.
+evalHNF :: Exp a -> Exp a
+evalHNF e = case e of
+    App a b -> let
+        -- Recurse in both branches
+        a' = evalHNF a
+        b' = evalHNF b
+      in
+        case a' of
+            -- If we have a lambda on the left side, apply it
+            Lam e' -> evalHNF $ apply b e'
+            -- Otherwise, leave them as-is
+            _      -> App a' b'
+    _ -> e
