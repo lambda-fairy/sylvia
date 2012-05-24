@@ -11,8 +11,8 @@ Description:
     It is an implementation of an idea by Keenan (1996). See
     <http://dkeenan.com/Lambda> for the theory behind this application.
 
-Homepage:            https://github.com/chrisyco/sylvia
-Bug-Reports:         https://github.com/chrisyco/sylvia/issues
+Homepage:            https://github.com/lfairy/sylvia
+Bug-Reports:         https://github.com/lfairy/sylvia/issues
 
 Author:              Chris Wong
 Maintainer:          chrisyco@gmail.com
@@ -55,4 +55,4 @@ Test-Suite tests
 
 Source-Repository head
     Type:     git
-    Location: https://github.com/chrisyco/sylvia.git
+    Location: https://github.com/lfairy/sylvia.git
