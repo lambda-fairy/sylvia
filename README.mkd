@@ -22,5 +22,5 @@ Quick start
 See [Building from source][] for more detailed instructions.
 
 
-[wiki]: https://github.com/chrisyco/sylvia/wiki/
-[Building from source]: https://github.com/chrisyco/sylvia/wiki/Building-from-source
+[wiki]: https://github.com/lfairy/sylvia/wiki
+[Building from source]: https://github.com/lfairy/sylvia/wiki/Building-from-source
