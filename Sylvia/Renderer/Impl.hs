@@ -4,10 +4,20 @@
 --
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : portable
+--
+-- This module provides two things:
+--
+-- 1. An interface, 'RenderImpl', that all rendering methods must
+--    implement.
+--
+-- 2. A menagerie of functions that use this interface.
 
 module Sylvia.Renderer.Impl
     (
+    -- * Interface
       RenderImpl(..)
+
+    -- * Menagerie
     , renderRhyme
     ) where
 
@@ -21,7 +31,7 @@ class Monad m => RenderImpl m where
     -- | Draw a line segment from one point to another.
     drawLine :: PInt -> PInt -> m ()
 
-    -- | Translate the image so its origin is at a certain point.
+    -- | Translate the given image by a vector.
     relativeTo :: PInt -> m a -> m a
 
 renderRhyme :: RenderImpl m => Rhyme -> m ()

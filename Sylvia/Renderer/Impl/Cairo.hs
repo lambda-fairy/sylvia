@@ -1,15 +1,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 -- |
--- Module      : Sylvia.Renderer.Cairo
+-- Module      : Sylvia.Renderer.Impl.Cairo
 -- Copyright   : GPLv3
 --
 -- Maintainer  : chrisyco@gmail.com
--- Portability : portable
+-- Portability : non-portable (requires FFI)
 --
 -- Renderer using the Cairo graphics library.
 
-module Sylvia.Renderer.Cairo
+module Sylvia.Renderer.Impl.Cairo
     (
     ) where
 
@@ -49,12 +49,14 @@ instance RenderImpl Cairo where
         \ctx@C{ ctxOffset = offset } -> ctx{ ctxOffset = offset |+| delta }
 
 dumpPNG :: Int -> Int -> Cairo a -> IO a
-dumpPNG w h action = withImageSurface FormatRGB24 w h $
-    \surface -> do
-        renderWith surface $ do { setSourceRGB 1 1 1; paint }
-        result <- renderWith surface $ runReaderT action (C (20 :| 10) (0 :| 0))
-        surfaceWriteToPNG surface "result.png"
-        return result
+dumpPNG w h action = withImageSurface FormatRGB24 w h $ \surface -> do
+    -- Fill the background with white
+    renderWith surface $ setSourceRGB 1 1 1 >> paint
+    -- Render ALL the things
+    result <- renderWith surface $ runReaderT action (C (20 :| 10) (0 :| 0))
+    -- Save the image
+    surfaceWriteToPNG surface "result.png"
+    return result
 
 testRhyme :: IO ()
 testRhyme = dumpPNG 260 100 $ do

@@ -4,6 +4,8 @@
 --
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : portable
+--
+-- Strict pairs, and operations on them.
 
 module Sylvia.Renderer.Pair
     (

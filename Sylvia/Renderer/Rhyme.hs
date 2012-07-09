@@ -5,7 +5,7 @@
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : portable
 --
--- Platform agnostic functions for calculating the rhyme.
+-- Calculating the rhyme of an expression.
 
 module Sylvia.Renderer.Rhyme
     (

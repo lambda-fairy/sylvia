@@ -157,9 +157,11 @@ verify' e = case verify e of
 -- | Create a lambda abstraction.
 --
 -- If you are using variable names as identifiers, use:
+--
 -- > abstract (match "foo")
 --
 -- If you are using de Bruijn indices, use:
+--
 -- > abstract shiftUp
 abstract
     :: (a -> Inc a) -- ^ Matching function
