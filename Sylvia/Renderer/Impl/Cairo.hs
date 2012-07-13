@@ -18,7 +18,6 @@ import Control.Monad.Trans.Reader
 import Graphics.Rendering.Cairo
 
 import Sylvia.Renderer.Impl
-import Sylvia.Renderer.Rhyme
 import Sylvia.Renderer.Pair
 
 type Cairo = ReaderT Context Render

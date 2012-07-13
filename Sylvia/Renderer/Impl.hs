@@ -23,8 +23,8 @@ module Sylvia.Renderer.Impl
 
 import Control.Monad ( zipWithM_ )
 
+import Sylvia.Renderer.Core
 import Sylvia.Renderer.Pair
-import Sylvia.Renderer.Rhyme
 
 -- | An implementation of a renderer.
 class Monad m => RenderImpl m where
