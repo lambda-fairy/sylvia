@@ -14,6 +14,10 @@ module Sylvia.Renderer.Pair
     , PInt
     , PDouble
 
+    -- * Deconstruction
+    , fstP
+    , sndP
+
     -- * Operations
     , (|+|)
     , (|*|)
@@ -42,6 +46,14 @@ type PInt = P Int
 
 -- | A pair of doubles.
 type PDouble = P Double
+
+-- | Get the first element of a pair.
+fstP :: P a -> a
+fstP (x :| _) = x
+
+-- | Get the second element of a pair.
+sndP :: P a -> a
+sndP (_ :| y) = y
 
 -- | Add or multiply the corresponding values in two pairs.
 (|+|), (|*|) :: Num a => P a -> P a -> P a

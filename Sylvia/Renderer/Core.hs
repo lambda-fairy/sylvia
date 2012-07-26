@@ -34,10 +34,6 @@ rhyme = ($ []) . go
         Lam _   -> error "rhyme: lambdas not implemented"
         App a b -> go a . go b
 
--- | Figure out the height of the an expression's rhyme.
-rhymeSize :: Exp Int -> Int
-rhymeSize = length . rhyme
-
 -- | The order of applications in an expression.
 type Rhythm = [Int]
 
