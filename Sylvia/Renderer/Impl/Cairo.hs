@@ -18,6 +18,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Graphics.Rendering.Cairo
 
+import Sylvia.Renderer.Core
 import Sylvia.Renderer.Impl
 import Sylvia.Renderer.Pair
 
@@ -78,4 +79,27 @@ testRhyme = dumpPNG 260 100 $ do
 
 testRhythm :: IO ()
 testRhythm = dumpPNG 500 100 $ do
-    relativeTo (1 :| 8) $ renderRhythm [0,0,0,0,0] [0,1,2,3]
+    relativeTo (1 :| 8) $ renderRhythm (replicate 5 0) [0,1,2,3]
+
+testAll :: IO ()
+testAll = dumpPNG 500 100 $ do
+    -- random numbers
+    relativeTo (1 :| 8) $ renderAll $ RS
+                            { rhyme = [0,1,2,3,4]
+                            , rhythm = [0,3,1,2]
+                            }
+    -- mockingbird
+    relativeTo (8 :| 8) $ renderAll $ RS
+                            { rhyme = [0,0]
+                            , rhythm = [0]
+                            }
+    -- bluebird
+    relativeTo (12 :| 8) $ renderAll $ RS
+                            { rhyme = [2,1,0]
+                            , rhythm = [1,0]
+                            }
+    -- warbler
+    relativeTo (17 :| 8) $ renderAll $ RS
+                            { rhyme = [1,0,0]
+                            , rhythm = [0,1]
+                            }

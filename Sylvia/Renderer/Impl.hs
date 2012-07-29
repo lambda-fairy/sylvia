@@ -18,6 +18,7 @@ module Sylvia.Renderer.Impl
       RenderImpl(..)
 
     -- * Menagerie
+    , renderAll
     , renderRhyme
     , renderRhythm
     ) where
@@ -41,6 +42,11 @@ class Monad m => RenderImpl m where
     -- | Translate the given image by a vector.
     relativeTo :: PInt -> m a -> m a
 
+renderAll :: RenderImpl m => RenderSpec -> m ()
+renderAll rs = do
+    renderRhyme (rhyme rs)
+    renderRhythm (rhyme rs) (rhythm rs)
+
 renderRhyme :: RenderImpl m => Rhyme -> m ()
 renderRhyme ry = zipWithM_ renderOne ry [0..]
   where
@@ -48,16 +54,16 @@ renderRhyme ry = zipWithM_ renderOne ry [0..]
     size = length ry
 
 renderRhythm :: RenderImpl m => Rhyme -> Rhythm -> m ()
-renderRhythm ry = relativeTo (1 :| (-size) + 1) . renderAll
+renderRhythm ry = relativeTo (1 :| (-size) + 1) . squashAll
   where
-    renderAll rt
+    squashAll rt
       = let
             (endState, actionList)
                 = mapAccumL squash (S.fromList [0 .. size-1])
-                    $ zip [0..] rt
+                    $ zip [1..] rt
         in if S.size endState == 1
             then sequence_ actionList
-                    >> drawLine (0 :| size-1) (S.findMin endState :| size-1)
+                    >> drawLine (0 :| size-1) (S.findMin endState + 1 :| size-1)
             else error "renderRhythm: invalid rhythm"
 
     squash state (destX, srcY) = (state', rhymeLine >> verticalLine >> dot)
@@ -71,6 +77,8 @@ renderRhythm ry = relativeTo (1 :| (-size) + 1) . renderAll
 
     size = length ry
 
+-- | Find the first element in the set that is greater than the specified
+-- value. If there are no elements that match, return 'Nothing'.
 lookupGT :: Ord a => a -> S.Set a -> Maybe a
 lookupGT x = minimum' . filterGT
   where

@@ -9,8 +9,13 @@
 
 module Sylvia.Renderer.Core
     (
+    -- * RenderSpec
+      RenderSpec(..)
+    , mkRenderSpec
+    , renderSize
+
     -- * Rhyme
-      Rhyme
+    , Rhyme
     , mkRhyme
 
     -- * Rhythm
@@ -18,7 +23,24 @@ module Sylvia.Renderer.Core
     , mkRhythm
     ) where
 
+import Control.Applicative
+
 import Sylvia.Model
+import Sylvia.Renderer.Pair
+
+data RenderSpec = RS
+    { rhyme      :: Rhyme
+    , rhythm     :: Rhythm
+    }
+  deriving (Show)
+
+-- | Build a 'RenderSpec' from an expression.
+mkRenderSpec :: Exp Int -> RenderSpec
+mkRenderSpec = RS <$> mkRhyme <*> mkRhythm
+
+-- | Calculate the size of the rendered expression.
+renderSize :: RenderSpec -> PInt
+renderSize = (:|) <$> length . rhythm <*> length . rhyme
 
 -- | The list of variables referenced in an expression, from left to right.
 type Rhyme = [Int]
