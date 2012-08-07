@@ -13,6 +13,7 @@ module Sylvia.Renderer.Impl.Cairo
     (
     ) where
 
+import Control.Applicative
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Graphics.Rendering.Cairo
@@ -36,8 +37,8 @@ getAbsolute pair = flip fmap ask $
 
 instance RenderImpl Cairo where
     drawLine src dest = do
-        x1 :| y1 <- getAbsolute src
-        x2 :| y2 <- getAbsolute dest
+        x1 :| y1 <- (|+| (0.5 :| 0.5)) <$> getAbsolute src
+        x2 :| y2 <- (|+| (0.5 :| 0.5)) <$> getAbsolute dest
         lift $ do
             newPath
             moveTo x1 y1

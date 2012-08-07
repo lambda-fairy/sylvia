@@ -19,6 +19,7 @@ module Sylvia.Renderer.Impl
 
     -- * Menagerie
     , renderRhyme
+    , renderRhyme'
     ) where
 
 import Control.Monad ( zipWithM_ )
@@ -34,8 +35,11 @@ class Monad m => RenderImpl m where
     -- | Translate the given image by a vector.
     relativeTo :: PInt -> m a -> m a
 
-renderRhyme :: RenderImpl m => Rhyme -> m ()
-renderRhyme rs = zipWithM_ renderOne rs [0..]
+renderRhyme :: RenderImpl m => Exp Int -> m ()
+renderRhyme = renderRhyme' . rhyme
+
+renderRhyme' :: RenderImpl m => Rhyme -> m ()
+renderRhyme' rs = zipWithM_ renderOne rs [0..]
   where
-    renderOne src dest = drawLine (0 :| -src) (1 :| dest - rhymeSize + 1)
-    rhymeSize = length rs
+    renderOne src dest = drawLine (0 :| -src) (1 :| dest - height + 1)
+    height = length rs
