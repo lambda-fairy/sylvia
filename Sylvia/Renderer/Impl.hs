@@ -22,24 +22,36 @@ module Sylvia.Renderer.Impl
     , renderRhyme'
     ) where
 
-import Control.Monad ( zipWithM_ )
+import Data.Monoid
 
+import Sylvia.Model
 import Sylvia.Renderer.Pair
-import Sylvia.Renderer.Rhyme
 
--- | An implementation of a renderer.
-class Monad m => RenderImpl m where
+-- | An action that yields an image.
+--
+-- 'mempty' should yield an empty image and 'mappend' should stack two
+-- images together.
+class Monoid r => RenderImpl r where
     -- | Draw a line segment from one point to another.
-    drawLine :: PInt -> PInt -> m ()
+    drawLine :: PInt -> PInt -> r
 
     -- | Translate the given image by a vector.
-    relativeTo :: PInt -> m a -> m a
+    relativeTo :: PInt -> r -> r
 
-renderRhyme :: RenderImpl m => Exp Int -> m ()
+renderRhyme :: RenderImpl r => Exp Int -> r
 renderRhyme = renderRhyme' . rhyme
 
-renderRhyme' :: RenderImpl m => Rhyme -> m ()
-renderRhyme' rs = zipWithM_ renderOne rs [0..]
+rhyme :: Exp Int -> [Int]
+rhyme = ($ []) . go
+  where
+    go :: Exp Int -> ([Int] -> [Int])
+    go e = case e of
+        Ref x   -> (x:)
+        Lam _   -> error "rhyme: lambdas not implemented"
+        App a b -> go a . go b
+
+renderRhyme' :: RenderImpl r => [Int] -> r
+renderRhyme' rs = mconcat $ zipWith renderOne rs [0..]
   where
     renderOne src dest = drawLine (0 :| -src) (1 :| dest - height + 1)
     height = length rs
