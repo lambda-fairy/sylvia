@@ -35,6 +35,9 @@ class Monoid r => RenderImpl r where
     -- | Draw a line segment from one point to another.
     drawLine :: PInt -> PInt -> r
 
+    -- | Draw a small circle centered at a point.
+    drawDot :: PInt -> r
+
     -- | Translate the given image by a vector.
     relativeTo :: PInt -> r -> r
 

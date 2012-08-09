@@ -53,6 +53,16 @@ instance RenderImpl Image where
             setLineWidth 1
             stroke
 
+    drawDot center = do
+        cx :| cy <- getAbsolute center
+        -- A dot's diameter is approximately equal to one vertical grid unit
+        radius <- asks (fromIntegral . (`div` 2) . sndP . ctxGridSize)
+        lift $ do
+            newPath
+            arc cx cy radius 0 (2 * pi)
+            setSourceRGB 0 0 0
+            fill
+
     relativeTo delta = I . local addOffset . unI
       where
         addOffset ctx@C{ ctxOffset = offset }
