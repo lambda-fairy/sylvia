@@ -17,9 +17,9 @@ module Sylvia.Renderer.Pair
     -- * Operations
     , (|+|)
     , (|*|)
-
-    -- * Conversions
     , fromIntegralP
+    , fstP
+    , sndP
     ) where
 
 import Control.Applicative
@@ -54,3 +54,11 @@ infixl 7 |*|
 -- | Apply 'fromIntegral' to the contents of a pair.
 fromIntegralP :: (Integral a, Num b) => P a -> P b
 fromIntegralP = fmap fromIntegral
+
+-- | Get the first element of a pair.
+fstP :: P a -> a
+fstP (x :| _) = x
+
+-- | Get the second element of a pair.
+sndP :: P a -> a
+sndP (_ :| y) = y
