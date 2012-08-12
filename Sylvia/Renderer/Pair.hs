@@ -9,17 +9,20 @@
 
 module Sylvia.Renderer.Pair
     (
-    -- * Types
+    -- * Building and dismantling pairs
       P(..)
+    , fstP
+    , sndP
+
+    -- * Fancy type aliases
     , PInt
     , PDouble
 
-    -- * Operations
+    -- * Operations on pairs
     , (|+|)
     , (|*|)
+    , negateP
     , fromIntegralP
-    , fstP
-    , sndP
     ) where
 
 import Control.Applicative
@@ -50,6 +53,10 @@ type PDouble = P Double
 
 infixl 6 |+|
 infixl 7 |*|
+
+-- | Negate the contents of a pair.
+negateP :: Num a => P a -> P a
+negateP = fmap negate
 
 -- | Apply 'fromIntegral' to the contents of a pair.
 fromIntegralP :: (Integral a, Num b) => P a -> P b
