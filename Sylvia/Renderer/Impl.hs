@@ -19,9 +19,10 @@ module Sylvia.Renderer.Impl
 
     -- * Menagerie
     , renderRhyme
-    , renderRhyme'
+    , renderRhythm
     ) where
 
+import Data.Foldable ( foldMap )
 import Data.Monoid
 
 import Sylvia.Model
@@ -41,20 +42,46 @@ class Monoid r => RenderImpl r where
     -- | Translate the given image by a vector.
     relativeTo :: PInt -> r -> r
 
-renderRhyme :: RenderImpl r => Exp Int -> r
-renderRhyme = renderRhyme' . rhyme
+type Rhyme = [RhymeUnit]
 
-rhyme :: Exp Int -> [Int]
-rhyme = ($ []) . go
-  where
-    go :: Exp Int -> ([Int] -> [Int])
-    go e = case e of
-        Ref x   -> (x:)
-        Lam _   -> error "rhyme: lambdas not implemented"
-        App a b -> go a . go b
+-- | Specifies a /rhyme line/: a straight line protruding from the left
+-- edge of a bounding box, connecting a variable to the sub-expression
+-- that uses it.
+--
+-- @RhymeUnit index dest@ will be rendered as a line from (0, -index) to
+-- (1, dest).
+data RhymeUnit = RhymeUnit
+    { _ruIndex :: Integer
+    , _ruDest :: Int
+    }
 
-renderRhyme' :: RenderImpl r => [Int] -> r
-renderRhyme' rs = mconcat $ zipWith renderOne rs [0..]
+renderRhyme :: RenderImpl r => Rhyme -> r
+renderRhyme = foldMap renderOne
   where
-    renderOne src dest = drawLine (0 :| -src) (1 :| dest - height + 1)
-    height = length rs
+    renderOne (RhymeUnit src dest) = drawLine (0 :| fromInteger (-src)) (1 :| dest)
+
+renderRhythm :: RenderImpl r => Exp Integer -> (r, PInt)
+renderRhythm e = case e of
+    Ref _   -> (mempty, 0 :| 0)
+    Lam e'  -> (image, size)
+      where
+        (image, size') = renderRhythm $ fmap shiftDown e'
+        size = size' |+| (2 :| 2)
+    App a b -> (image, size)
+      where
+        image = mconcat $
+            -- Two sub-expressions
+            [ relativeTo (-1 :| aOffset) aImage
+            , relativeTo (-1 :|       0) bImage
+            -- Horizontal throat lines coming out of the sub-expressions
+            , drawLine (-1 :| aOffset) (0 :| aOffset)
+            , drawLine (-1 :|       0) (0 :|       0)
+            -- Vertical line connecting the two
+            , drawLine (0 :| aOffset) (0 :| 0)
+            -- Application dot
+            , drawDot (0 :| 0)
+            ]
+        (aImage, (aWidth :| aHeight)) = renderRhythm a
+        (bImage, (bWidth :| bHeight)) = renderRhythm b
+        aOffset = (-bHeight) - 1
+        size = (max aWidth bWidth + 1) :| (aHeight + bHeight + 1)

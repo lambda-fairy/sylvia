@@ -17,6 +17,7 @@ import Control.Monad.Trans.Reader
 import Data.Monoid
 import Graphics.Rendering.Cairo
 
+import Sylvia.Model
 import Sylvia.Renderer.Impl
 import Sylvia.Renderer.Pair
 
@@ -53,7 +54,7 @@ instance RenderImpl Image where
             setLineWidth 1
             stroke
 
-    drawDot center = do
+    drawDot center = I $ do
         cx :| cy <- getAbsolute center
         -- A dot's diameter is approximately equal to one vertical grid unit
         radius <- asks (fromIntegral . (`div` 2) . sndP . ctxGridSize)
@@ -68,21 +69,22 @@ instance RenderImpl Image where
         addOffset ctx@C{ ctxOffset = offset }
           = ctx{ ctxOffset = offset |+| delta }
 
-dumpPNG :: Int -> Int -> Image -> IO ()
-dumpPNG w h action = withImageSurface FormatRGB24 w h $ \surface -> do
+dumpPNG :: PInt -> Image -> IO ()
+dumpPNG size action = withImageSurface FormatRGB24 w h $ \surface -> do
     -- Fill the background with white
     renderWith surface $ setSourceRGB 1 1 1 >> paint
     -- Render ALL the things
-    renderWith surface $ runImage action (C (20 :| 10) (0 :| 0))
+    let action' = relativeTo (1 :| 1) action
+    renderWith surface $ runImage action' (C defaultGridSize (0 :| 0))
     -- Save the image
     surfaceWriteToPNG surface "result.png"
+  where
+    defaultGridSize = 20 :| 10
+    w :| h = defaultGridSize |*| (size |+| (2 :| 2)) -- padding
 
-testRhyme :: IO ()
-testRhyme = dumpPNG 260 100 $ mconcat
-    [ relativeTo (1 :| 8) $ renderRhyme' [5,4,3,2,1]
-    , relativeTo (3 :| 8) $ renderRhyme' [4,3,2,1,0]
-    , relativeTo (5 :| 8) $ renderRhyme' [0,1,2,3,4]
-    , relativeTo (7 :| 8) $ renderRhyme' [0,0]
-    , relativeTo (9 :| 8) $ renderRhyme' [1,0]
-    , relativeTo (11 :| 8) $ renderRhyme' [1]
-    ]
+testRender :: IO ()
+testRender = dumpPNG size $ relativeTo size image
+  where
+    (image, size) = renderRhythm $
+        (Ref 2 .$. Ref 0) .$. (Ref 1 .$. Ref 0) .$. (Ref 3 .$. Ref 0)
+    (.$.) = App
