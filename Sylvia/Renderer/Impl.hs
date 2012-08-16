@@ -33,6 +33,11 @@ import Sylvia.Renderer.Pair
 -- 'mempty' should yield an empty image and 'mappend' should stack two
 -- images together.
 class Monoid r => RenderImpl r where
+    -- | Draw a dotted rectangle.
+    drawBox :: PInt -- ^ Corner position
+            -> PInt -- ^ Size
+            -> r
+
     -- | Draw a line segment from one point to another.
     drawLine :: PInt -> PInt -> r
 

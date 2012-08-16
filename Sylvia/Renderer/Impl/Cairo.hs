@@ -28,6 +28,12 @@ type ImageM = ReaderT Context Render
 runImage :: Image -> Context -> Render ()
 runImage (I action) = runReaderT action
 
+-- | Lift a rendering action into the 'ImageM' monad, wrapping it in
+-- calls to 'save' and 'restore' to stop its internal state from leaking
+-- out.
+cairo :: Render a -> ImageM a
+cairo action = lift $ save >> action >> restore
+
 data Context = C
     { ctxGridSize :: PInt
     , ctxOffset   :: PInt
@@ -39,15 +45,30 @@ getAbsolute :: PInt -> ImageM PDouble
 getAbsolute pair = flip fmap ask $
     \(C gridSize offset) -> fromIntegralP $ (pair |+| offset) |*| gridSize
 
+-- | Add a half-pixel offset. This can make lines noticeably sharper, by
+-- aligning points to the pixel grid.
+addHalf :: PDouble -> PDouble
+addHalf = (|+| (0.5 :| 0.5))
+
 instance Monoid Image where
     mempty = I $ return ()
     I a `mappend` I b = I $ a >> b
 
 instance RenderImpl Image where
+    drawBox corner size = I $ do
+        x  :| y  <- addHalf <$> getAbsolute corner
+        dx :| dy <- fromIntegralP . (|*| size) <$> asks ctxGridSize
+        cairo $ do
+            newPath
+            rectangle x y dx dy
+            setDash [1, 1] 0
+            setLineWidth 1
+            stroke
+
     drawLine src dest = I $ do
-        x1 :| y1 <- (|+| (0.5 :| 0.5)) <$> getAbsolute src
-        x2 :| y2 <- (|+| (0.5 :| 0.5)) <$> getAbsolute dest
-        lift $ do
+        x1 :| y1 <- addHalf <$> getAbsolute src
+        x2 :| y2 <- addHalf <$> getAbsolute dest
+        cairo $ do
             newPath
             moveTo x1 y1
             lineTo x2 y2
@@ -58,7 +79,7 @@ instance RenderImpl Image where
         cx :| cy <- getAbsolute center
         -- A dot's diameter is approximately equal to one vertical grid unit
         radius <- asks (fromIntegral . (`div` 2) . sndP . ctxGridSize)
-        lift $ do
+        cairo $ do
             newPath
             arc cx cy radius 0 (2 * pi)
             setSourceRGB 0 0 0
