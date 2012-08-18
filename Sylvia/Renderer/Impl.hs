@@ -19,7 +19,9 @@ module Sylvia.Renderer.Impl
 
     -- * Menagerie
     , renderRhyme
+    , RhymeUnit(..)
     , renderRhythm
+    , Result(..)
     ) where
 
 import Data.Foldable ( foldMap )
@@ -56,28 +58,36 @@ type Rhyme = [RhymeUnit]
 -- @RhymeUnit index dest@ will be rendered as a line from (0, -index) to
 -- (1, dest).
 data RhymeUnit = RhymeUnit
-    { _ruIndex :: Integer
-    , _ruDest :: Int
+    { ruIndex :: Integer
+    , ruDest  :: Int
     }
+  deriving (Show)
 
 renderRhyme :: RenderImpl r => Rhyme -> r
 renderRhyme = foldMap renderOne
   where
     renderOne (RhymeUnit src dest) = drawLine (0 :| fromInteger (-src)) (1 :| dest)
 
-renderRhythm :: RenderImpl r => Exp Integer -> (r, PInt)
+data Result r = Result
+    { resultImage :: r
+    , resultSize  :: PInt
+    , resultRhyme :: Rhyme
+    }
+  deriving (Show)
+
+renderRhythm :: RenderImpl r => Exp Integer -> Result r
 renderRhythm e = case e of
-    Ref _   -> (mempty, 0 :| 0)
-    Lam e'  -> (image, size)
+    Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0]
+    Lam e'  -> Result image size rhyme
       where
-        (image, size') = renderRhythm $ fmap shiftDown e'
+        Result image size' rhyme = renderRhythm $ fmap shiftDown e'
         size = size' |+| (2 :| 2)
-    App a b -> (image, size)
+    App a b -> Result image size rhyme
       where
         image = mconcat $
             -- Two sub-expressions
-            [ relativeTo (-1 :| aOffset) aImage
-            , relativeTo (-1 :|       0) bImage
+            [ aImage
+            , bImage
             -- Horizontal throat lines coming out of the sub-expressions
             , drawLine (-1 :| aOffset) (0 :| aOffset)
             , drawLine (-1 :|       0) (0 :|       0)
@@ -86,7 +96,18 @@ renderRhythm e = case e of
             -- Application dot
             , drawDot (0 :| 0)
             ]
-        (aImage, (aWidth :| aHeight)) = renderRhythm a
-        (bImage, (bWidth :| bHeight)) = renderRhythm b
+        Result aImage (aWidth :| aHeight) aRhyme = relativeTo' (-1 :| aOffset) $ renderRhythm a
+        Result bImage (bWidth :| bHeight) bRhyme = relativeTo' (-1 :|       0) $ renderRhythm b
         aOffset = (-bHeight) - 1
         size = (max aWidth bWidth + 1) :| (aHeight + bHeight + 1)
+        rhyme = aRhyme ++ bRhyme
+
+relativeTo' :: RenderImpl r => PInt -> Result r -> Result r
+relativeTo' offset@(_ :| offsetY) (Result image size rhyme)
+    = Result image' size rhyme'
+  where
+    image' = relativeTo offset image
+    rhyme' = map (shiftRhyme offsetY) rhyme
+
+    shiftRhyme :: Int -> RhymeUnit -> RhymeUnit
+    shiftRhyme dy (RhymeUnit src dest) = RhymeUnit src (dest + dy)

@@ -108,8 +108,10 @@ dumpPNG size action = withImageSurface FormatRGB24 w h $ \surface -> do
     w :| h = defaultGridSize |*| (size |+| (2 :| 2)) -- padding
 
 testRender :: IO ()
-testRender = dumpPNG size $ relativeTo size image
+testRender = do
+    dumpPNG size $ relativeTo size image
+    print rhyme
   where
-    (image, size) = renderRhythm $
+    Result image size rhyme = renderRhythm $
         (Ref 2 .$. Ref 0) .$. (Ref 1 .$. Ref 0) .$. (Ref 3 .$. Ref 0)
     (.$.) = App
