@@ -32,7 +32,11 @@ runImage (I action) = runReaderT action
 -- calls to 'save' and 'restore' to stop its internal state from leaking
 -- out.
 cairo :: Render a -> ImageM a
-cairo action = lift $ save >> action >> restore
+cairo action = lift $ do
+    save
+    result <- action
+    restore
+    return result
 
 data Context = C
     { ctxGridSize :: PInt
