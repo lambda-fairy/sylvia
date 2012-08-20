@@ -85,13 +85,13 @@ renderRhythm e = case e of
     App a b -> Result image size rhyme
       where
         image = mconcat $
-            -- Two sub-expressions
+            -- Draw the two sub-expressions
             [ aImage
             , bImage
             -- Horizontal throat lines coming out of the sub-expressions
             , drawLine (-1 :| aOffset) (0 :| aOffset)
             , drawLine (-1 :|       0) (0 :|       0)
-            -- Vertical line connecting the two
+            -- Connect them with a vertical line
             , drawLine (0 :| aOffset) (0 :| 0)
             -- Application dot
             , drawDot (0 :| 0)
