@@ -24,6 +24,7 @@ module Sylvia.Renderer.Impl
     , Result(..)
     ) where
 
+import Control.Applicative
 import Data.Foldable ( foldMap )
 import Data.Monoid
 
@@ -91,6 +92,9 @@ renderRhythm e = case e of
             -- Horizontal throat lines coming out of the sub-expressions
             , drawLine (-1 :| aOffset) (0 :| aOffset)
             , drawLine (-1 :|       0) (0 :|       0)
+            -- Extend the shorter sub-expression so it matches up with
+            -- the bigger one
+            , rhymeExtension
             -- Connect them with a vertical line
             , drawLine (0 :| aOffset) (0 :| 0)
             -- Application dot
@@ -99,6 +103,12 @@ renderRhythm e = case e of
         Result aImage (aWidth :| aHeight) aRhyme = relativeTo' (-1 :| aOffset) $ renderRhythm a
         Result bImage (bWidth :| bHeight) bRhyme = relativeTo' (-1 :|       0) $ renderRhythm b
         aOffset = (-bHeight) - 1
+        rhymeExtension =
+            let extend = extendRhyme (-1 - aWidth) (-1 - bWidth)
+            in case aWidth `compare` bWidth of
+                LT -> extend aRhyme
+                EQ -> mempty
+                GT -> extend bRhyme
         size = (max aWidth bWidth + 1) :| (aHeight + bHeight + 1)
         rhyme = aRhyme ++ bRhyme
 
@@ -111,3 +121,8 @@ relativeTo' offset@(_ :| offsetY) (Result image size rhyme)
 
     shiftRhyme :: Int -> RhymeUnit -> RhymeUnit
     shiftRhyme dy (RhymeUnit src dest) = RhymeUnit src (dest + dy)
+
+extendRhyme :: RenderImpl r => Int -> Int -> Rhyme -> r
+extendRhyme srcX destX = foldMap $ drawLine
+                                    <$> (srcX  :|) . ruDest
+                                    <*> (destX :|) . ruDest
