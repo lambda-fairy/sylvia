@@ -65,7 +65,7 @@ instance RenderImpl Image where
         cairo $ do
             newPath
             rectangle x y dx dy
-            setDash [1, 1] 0
+            setDash [1, 1] 0.5
             setLineWidth 1
             stroke
 
@@ -109,9 +109,11 @@ dumpPNG size action = withImageSurface FormatRGB24 w h $ \surface -> do
 
 testRender :: IO ()
 testRender = do
-    dumpPNG size $ relativeTo size image
-    print rhyme
+    uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
   where
-    Result image size rhyme = renderRhythm $
-        (Ref 2 .$. Ref 0) .$. (Ref 1 .$. Ref 0) .$. (Ref 3 .$. Ref 0)
+    step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
+      where Result image' (w' :| h') _ = renderRhythm e
+    es  = (Ref 2 .$. Ref 0) .$. (Ref 1 .$. Ref 0) .$. (Ref 3 .$. Ref 0)
+        : Ref 0 .$. (Lam (Ref O)) .$. Ref 0
+        : []
     (.$.) = App

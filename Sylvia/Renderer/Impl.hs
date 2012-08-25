@@ -81,7 +81,8 @@ renderRhythm e = case e of
     Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0]
     Lam e'  -> Result image size rhyme
       where
-        Result image size' rhyme = renderRhythm $ fmap shiftDown e'
+        image = drawBox (0 :| 0) (negateP size) <> image'
+        Result image' size' rhyme = renderRhythm $ fmap shiftDown e'
         size = size' |+| (2 :| 2)
     App a b -> Result image size rhyme
       where
@@ -100,7 +101,7 @@ renderRhythm e = case e of
             -- Application dot
             , drawDot (0 :| 0)
             ]
-        Result aImage aSize@(aWidth :| aHeight) aRhyme = relativeTo' aOrigin   $ renderRhythm a
+        Result aImage aSize@(aWidth :|       _) aRhyme = relativeTo' aOrigin   $ renderRhythm a
         Result bImage bSize@(bWidth :| bHeight) bRhyme = relativeTo' (-1 :| 0) $ renderRhythm b
         aOrigin = (-1 - bWidth) :| (-1 - bHeight)
         rhymeExtension = extendRhyme (-1 - aWidth - bWidth) (-1 - bWidth) bRhyme
