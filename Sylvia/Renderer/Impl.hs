@@ -57,7 +57,7 @@ type Rhyme = [RhymeUnit]
 -- that uses it.
 --
 -- @RhymeUnit index dest@ will be rendered as a line from (0, -index) to
--- (1, dest).
+-- (1, dest), where (0, 0) is the position of the outer box's ear.
 data RhymeUnit = RhymeUnit
     { ruIndex :: Integer
     , ruDest  :: Int
@@ -71,8 +71,11 @@ renderRhyme = foldMap renderOne
 
 data Result r = Result
     { resultImage :: r
+      -- ^ The rendered image.
     , resultSize  :: PInt
+      -- ^ The size of the image's bounding box.
     , resultRhyme :: Rhyme
+      -- ^ The expression's rhyme.
     }
   deriving (Show)
 
