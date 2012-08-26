@@ -112,8 +112,8 @@ testRender = do
     uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
   where
     step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
-      where Result image' (w' :| h') _ = renderRhythm e
+      where Result image' (w' :| h') _ _ = renderRhythm e
     es  = (Ref 2 .$. Ref 0) .$. (Ref 1 .$. Ref 0) .$. (Ref 3 .$. Ref 0)
-        : Ref 0 .$. (Lam (Ref O)) .$. Ref 0
+        : Ref 0 .$. (Lam (App (Ref O) (Ref (S 0)))) .$. Ref 0
         : []
     (.$.) = App

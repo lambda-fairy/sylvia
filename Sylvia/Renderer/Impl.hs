@@ -27,6 +27,7 @@ module Sylvia.Renderer.Impl
 import Control.Applicative
 import Data.Foldable ( foldMap )
 import Data.Monoid
+import Debug.Trace
 
 import Sylvia.Model
 import Sylvia.Renderer.Pair
@@ -76,50 +77,75 @@ data Result r = Result
       -- ^ The size of the image's bounding box.
     , resultRhyme :: Rhyme
       -- ^ The expression's rhyme.
+    , resultThroatY :: Int
+      -- ^ The Y offset of the expression's ear and throat.
     }
   deriving (Show)
 
 renderRhythm :: RenderImpl r => Exp Integer -> Result r
 renderRhythm e = case e of
-    Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0]
-    Lam e'  -> Result image size rhyme
-      where
-        image = drawBox (0 :| 0) (negateP size) <> image'
-        Result image' size' rhyme = renderRhythm $ fmap shiftDown e'
-        size = size' |+| (2 :| 2)
-    App a b -> Result image size rhyme
+    Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0] 0
+    Lam e'  -> renderLambda e'
+    App a b -> Result image size rhyme 0
       where
         image = mconcat $
             -- Draw the two sub-expressions
             [ aImage
             , bImage
-            -- Horizontal throat lines coming out of the sub-expressions
-            , drawLine aOrigin   (0 :| sndP aOrigin)
-            , drawLine (-1 :| 0) (0 :|            0)
             -- Extend the shorter sub-expression so it matches up with
             -- the bigger one
-            , rhymeExtension
+            , extendRhyme (-aWidth) (-bWidth) bRhyme
             -- Connect them with a vertical line
-            , drawLine (0 :| sndP aOrigin) (0 :| 0)
+            , drawLine (0 :| -1 - bHeight) (0 :| 0)
             -- Application dot
             , drawDot (0 :| 0)
             ]
-        Result aImage aSize@(aWidth :|       _) aRhyme = relativeTo' aOrigin   $ renderRhythm a
-        Result bImage bSize@(bWidth :| bHeight) bRhyme = relativeTo' (-1 :| 0) $ renderRhythm b
-        aOrigin = (-1 - bWidth) :| (-1 - bHeight)
-        rhymeExtension = extendRhyme (-1 - aWidth - bWidth) (-1 - bWidth) bRhyme
-        size = aSize |+| bSize |+| (1 :| 1)
+        Result aImage aSize@(aWidth :| aHeight) aRhyme aThroatY
+            = shiftY (-1 - bHeight) $ renderWithThroat bWidth a
+        Result bImage bSize@(bWidth :| bHeight) bRhyme bThroatY
+            = renderWithThroat 1 b
+        size = (aWidth :| aHeight + bHeight + 1)
         rhyme = aRhyme ++ bRhyme
 
-relativeTo' :: RenderImpl r => PInt -> Result r -> Result r
-relativeTo' offset@(_ :| offsetY) (Result image size rhyme)
-    = Result image' size rhyme'
+-- | Render an expression with a horizontal line sticking out of its
+-- throat. Doesn't sound too comfortable, to be honest.
+--
+-- The 'resultSize' includes the length of this extra line.
+renderWithThroat
+    :: RenderImpl r
+    => Int -- ^ Length of the throat line. This should be positive.
+    -> Exp Integer -> Result r
+renderWithThroat throatLength e = Result image' size' rhyme throatY
   where
-    image' = relativeTo offset image
-    rhyme' = map (shiftRhyme offsetY) rhyme
+    Result image size rhyme throatY = renderRhythm e
+    -- Shift the main image to the left, then draw a line next to it
+    image' = relativeTo (-throatLength :| 0) image <> throatLine
+    throatLine = drawLine (-throatLength :| throatY) (0 :| throatY)
+    size' = size |+| (throatLength :| 0)
 
-    shiftRhyme :: Int -> RhymeUnit -> RhymeUnit
-    shiftRhyme dy (RhymeUnit src dest) = RhymeUnit src (dest + dy)
+-- | Render a lambda expression.
+--
+-- Right now it's just an extra-glitchy placeholder; it'll be finished
+-- soon, I promise.
+renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
+renderLambda e' = Result image size rhyme (-1)
+  where
+    image = drawBox (0 :| 0) (negateP size) <> image'
+    Result image' size' rhyme _ = renderRhythm $ fmap shiftDown e'
+    size = size' |+| (2 :| 2)
+
+-- | Shift an image vertically by a specified amount, changing the rhyme
+-- and throat position to compensate.
+shiftY :: RenderImpl r => Int -> Result r -> Result r
+shiftY dy (Result image size rhyme throatY)
+    = Result image' size rhyme' throatY'
+  where
+    image' = relativeTo (0 :| dy) image
+    rhyme' = map shiftRhyme rhyme
+    throatY' = throatY + dy
+
+    shiftRhyme :: RhymeUnit -> RhymeUnit
+    shiftRhyme (RhymeUnit src dest) = RhymeUnit src (dest + dy)
 
 extendRhyme :: RenderImpl r => Int -> Int -> Rhyme -> r
 extendRhyme srcX destX = foldMap $ drawLine
