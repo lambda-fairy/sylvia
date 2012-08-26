@@ -114,6 +114,6 @@ testRender = do
     step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
       where Result image' (w' :| h') _ _ = renderRhythm e
     es  = (Ref 2 .$. Ref 0) .$. (Ref 1 .$. Ref 0) .$. (Ref 3 .$. Ref 0)
-        : Ref 0 .$. (Lam (App (Ref O) (Ref (S 0)))) .$. Ref 0
+        : Ref 0 .$. (Lam $ Lam (App (Ref (S O)) (Ref (S (S 0))))) .$. Ref 0
         : []
     (.$.) = App

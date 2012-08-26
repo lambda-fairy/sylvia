@@ -86,7 +86,7 @@ renderRhythm :: RenderImpl r => Exp Integer -> Result r
 renderRhythm e = case e of
     Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0] 0
     Lam e'  -> renderLambda e'
-    App a b -> Result image size rhyme 0
+    App a b -> Result image size rhyme bThroatY
       where
         image = mconcat $
             -- Draw the two sub-expressions
@@ -96,9 +96,9 @@ renderRhythm e = case e of
             -- the bigger one
             , extendRhyme (-aWidth) (-bWidth) bRhyme
             -- Connect them with a vertical line
-            , drawLine (0 :| -1 - bHeight) (0 :| 0)
+            , drawLine (0 :| aThroatY) (0 :| bThroatY)
             -- Application dot
-            , drawDot (0 :| 0)
+            , drawDot (0 :| bThroatY)
             ]
         Result aImage aSize@(aWidth :| aHeight) aRhyme aThroatY
             = shiftY (-1 - bHeight) $ renderWithThroat bWidth a
@@ -124,15 +124,12 @@ renderWithThroat throatLength e = Result image' size' rhyme throatY
     size' = size |+| (throatLength :| 0)
 
 -- | Render a lambda expression.
---
--- Right now it's just an extra-glitchy placeholder; it'll be finished
--- soon, I promise.
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
-renderLambda e' = Result image size rhyme (-1)
+renderLambda e' = Result image size rhyme throatY
   where
     image = drawBox (0 :| 0) (negateP size) <> image'
-    Result image' size' rhyme _ = renderRhythm $ fmap shiftDown e'
-    size = size' |+| (2 :| 2)
+    Result image' size' rhyme throatY = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
+    size = size' |+| (1 :| 2)
 
 -- | Shift an image vertically by a specified amount, changing the rhyme
 -- and throat position to compensate.
