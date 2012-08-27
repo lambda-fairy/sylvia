@@ -15,12 +15,13 @@ module Sylvia.Renderer.Impl.Cairo
 import Control.Applicative
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
-import Data.Monoid
+import Data.Monoid ( Monoid(..), (<>) )
+import Data.Void ( vacuous )
 import Graphics.Rendering.Cairo
 
-import Sylvia.Model
 import Sylvia.Renderer.Impl
 import Sylvia.Renderer.Pair
+import Sylvia.Text.Parser
 
 newtype Image = I { unI :: ImageM () }
 
@@ -116,7 +117,19 @@ testRender = uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
   where
     step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
       where Result image' (w' :| h') _ _ = renderRhythm e
-    es  = (Ref 2 .$. Ref 0) .$. (Ref 1 .$. Ref 0) .$. (Ref 3 .$. Ref 0)
-        : Ref 0 .$. (Lam $ Lam (App (Ref (S O)) (Ref (S (S 0))))) .$. Ref 0
-        : []
-    (.$.) = App
+    es = map (vacuous . fromRight . parseExp . map (replace 'L' '\\')) $
+        [ "L 0"
+        , "LLL 2 0 (1 0)"
+        , "(L 0 0) (L 0 0)"
+        , "L (L 1 (0 0)) (L 1 (0 0))"
+        ]
+
+fromRight :: Show e => Either e a -> a
+fromRight e = case e of
+    Left sinister -> error $ "Unexpected Left: " ++ show sinister
+    Right dextrous -> dextrous
+
+replace :: Eq a => a -> a -> a -> a
+replace target repl input
+  | input == target = repl
+  | otherwise       = input
