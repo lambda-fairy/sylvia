@@ -38,18 +38,42 @@ import Sylvia.Renderer.Pair
 -- images together.
 class Monoid r => RenderImpl r where
     -- | Draw a dotted rectangle.
-    drawBox :: PInt -- ^ Corner position
-            -> PInt -- ^ Size
-            -> r
+    drawDottedRectangle
+        :: PInt -- ^ Corner position
+        -> PInt -- ^ Size
+        -> r
 
     -- | Draw a line segment from one point to another.
     drawLine :: PInt -> PInt -> r
 
-    -- | Draw a small circle centered at a point.
-    drawDot :: PInt -> r
+    -- | Draw a simple circle segment, centered at a point.
+    drawCircleSegment
+        :: PInt   -- ^ Center point
+        -> Double -- ^ Start angle, in radians
+        -> Double -- ^ End angle, also in radians. Radians are cool.
+        -> r
 
     -- | Translate the given image by a vector.
     relativeTo :: PInt -> r -> r
+
+-- | Draw a full circle, centered at a point.
+drawDot :: RenderImpl r => PInt -> r
+drawDot center = drawCircleSegment center 0 (2 * pi)
+
+-- | Draw a box, complete with a throat and ear.
+drawBox
+    :: RenderImpl r
+    => PInt -- ^ Top-left corner point
+    -> PInt -- ^ Size
+    -> Int  -- ^ Y offset of ear and throat
+    -> r
+drawBox corner size throatY
+    =  drawDottedRectangle corner size
+    <> drawCircleSegment (corner |+| (    0 :| height + throatY)) (1 * rightAngle) (3 * rightAngle)
+    <> drawCircleSegment (corner |+| (width :| height + throatY)) (3 * rightAngle) (1 * rightAngle)
+  where
+    width :| height = size
+    rightAngle = pi / 2
 
 type Rhyme = [RhymeUnit]
 
@@ -127,7 +151,7 @@ renderWithThroat throatLength e = Result image' size' rhyme throatY
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
 renderLambda e' = Result image size rhyme throatY
   where
-    image = drawBox (0 :| 0) (negateP size) <> image'
+    image = drawBox (negateP size) size throatY <> image'
     Result image' size' rhyme throatY = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
     size = size' |+| (1 :| 2)
 

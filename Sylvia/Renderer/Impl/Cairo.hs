@@ -46,8 +46,11 @@ data Context = C
 -- | Map a relative coordinate to an absolute one, scaling and shifting
 -- it in the process.
 getAbsolute :: PInt -> ImageM PDouble
-getAbsolute pair = flip fmap ask $
-    \(C gridSize offset) -> fromIntegralP $ (pair |+| offset) |*| gridSize
+getAbsolute pair = getRelative =<< (pair |+|) <$> asks ctxOffset
+
+-- | Scale a relative coordinate.
+getRelative :: PInt -> ImageM PDouble
+getRelative pair = fromIntegralP . (pair |*|) <$> asks ctxGridSize
 
 -- | Add a half-pixel offset. This can make lines noticeably sharper, by
 -- aligning points to the pixel grid.
@@ -59,9 +62,9 @@ instance Monoid Image where
     I a `mappend` I b = I $ a >> b
 
 instance RenderImpl Image where
-    drawBox corner size = I $ do
+    drawDottedRectangle corner size = I $ do
         x  :| y  <- addHalf <$> getAbsolute corner
-        dx :| dy <- fromIntegralP . (|*| size) <$> asks ctxGridSize
+        dx :| dy <- getRelative size
         cairo $ do
             newPath
             rectangle x y dx dy
@@ -79,13 +82,13 @@ instance RenderImpl Image where
             setLineWidth 1
             stroke
 
-    drawDot center = I $ do
+    drawCircleSegment center start end = I $ do
         cx :| cy <- getAbsolute center
         -- A dot's diameter is approximately equal to one vertical grid unit
         radius <- asks (fromIntegral . (`div` 2) . sndP . ctxGridSize)
         cairo $ do
             newPath
-            arc cx cy radius 0 (2 * pi)
+            arc cx cy radius start end
             setSourceRGB 0 0 0
             fill
 
@@ -108,8 +111,7 @@ dumpPNG size action = withImageSurface FormatRGB24 w h $ \surface -> do
     w :| h = defaultGridSize |*| (size |+| (2 :| 2)) -- padding
 
 testRender :: IO ()
-testRender = do
-    uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
+testRender = uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
   where
     step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
       where Result image' (w' :| h') _ _ = renderRhythm e
