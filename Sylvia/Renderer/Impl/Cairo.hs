@@ -9,6 +9,7 @@
 
 module Sylvia.Renderer.Impl.Cairo
     (
+      testRender
     ) where
 
 import Control.Applicative

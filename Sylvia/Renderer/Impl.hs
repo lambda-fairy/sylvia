@@ -27,7 +27,6 @@ module Sylvia.Renderer.Impl
 import Control.Applicative
 import Data.Foldable ( foldMap )
 import Data.Monoid
-import Debug.Trace
 
 import Sylvia.Model
 import Sylvia.Renderer.Pair
@@ -124,9 +123,9 @@ renderRhythm e = case e of
             -- Application dot
             , drawDot (0 :| bThroatY)
             ]
-        Result aImage aSize@(aWidth :| aHeight) aRhyme aThroatY
+        Result aImage (aWidth :| aHeight) aRhyme aThroatY
             = shiftY (-1 - bHeight) $ renderWithThroat bWidth a
-        Result bImage bSize@(bWidth :| bHeight) bRhyme bThroatY
+        Result bImage (bWidth :| bHeight) bRhyme bThroatY
             = renderWithThroat 1 b
         size = (aWidth :| aHeight + bHeight + 1)
         rhyme = aRhyme ++ bRhyme
