@@ -88,10 +88,10 @@ data RhymeUnit = RhymeUnit
     }
   deriving (Show)
 
-renderRhyme :: RenderImpl r => Rhyme -> r
-renderRhyme = foldMap renderOne
+renderRhyme :: RenderImpl r => Int -> Rhyme -> r
+renderRhyme throatY = foldMap renderOne
   where
-    renderOne (RhymeUnit src dest) = drawLine (0 :| fromInteger (-src)) (1 :| dest)
+    renderOne (RhymeUnit src dest) = drawLine (0 :| throatY - fromInteger src) (1 :| dest)
 
 data Result r = Result
     { resultImage :: r
@@ -150,9 +150,15 @@ renderWithThroat throatLength e = Result image' size' rhyme throatY
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
 renderLambda e' = Result image size rhyme throatY
   where
-    image = drawBox (negateP size) size throatY <> image'
-    Result image' size' rhyme throatY = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
-    size = size' |+| (1 :| 2)
+    image = drawBox (negateP size) size throatY
+            <> relativeTo (-width :| 0) (renderRhyme throatY innerRhyme)
+            <> image'
+    Result image' size' innerRhyme throatY
+        = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
+    rhyme = zipWith RhymeUnit
+                [pred index | RhymeUnit index _ <- innerRhyme, index > 0]
+                [throatY-1, throatY-2 ..]
+    size@(width :| _) = size' |+| (1 :| 2)
 
 -- | Shift an image vertically by a specified amount, changing the rhyme
 -- and throat position to compensate.
