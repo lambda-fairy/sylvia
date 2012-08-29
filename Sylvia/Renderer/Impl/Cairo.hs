@@ -119,6 +119,8 @@ testRender = uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
       where Result image' (w' :| h') _ _ = renderRhythm e
     es = map (vacuous . fromRight . parseExp . map (replace 'L' '\\')) $
         [ "L 0"
+        , "LL 1"
+        , "LL 0"
         , "LLL 2 0 (1 0)"
         , "(L 0 0) (L 0 0)"
         , "L (L 1 (0 0)) (L 1 (0 0))"

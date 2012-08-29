@@ -26,6 +26,7 @@ module Sylvia.Renderer.Impl
 
 import Control.Applicative
 import Data.Foldable ( foldMap )
+import Data.List ( nub )
 import Data.Monoid
 
 import Sylvia.Model
@@ -150,7 +151,7 @@ renderWithThroat throatLength e = Result image size rhyme throatY
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
 renderLambda e' = Result image size rhyme throatY
   where
-    Result image' size' innerRhyme throatY
+    Result image' (innerWidth :| innerHeight) innerRhyme throatY
         = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
     image = drawBox (negateP size) size throatY
             <> relativeTo (-width :| 0) (renderRhyme throatY innerRhyme)
@@ -158,7 +159,8 @@ renderLambda e' = Result image size rhyme throatY
     rhyme = zipWith RhymeUnit
                 [pred index | RhymeUnit index _ <- innerRhyme, index > 0]
                 [throatY-1, throatY-2 ..]
-    size@(width :| _) = size' |+| (1 :| 2)
+    rhymeHeight = length . nub $ map ruIndex rhyme
+    size@(width :| _) = (innerWidth + 1 :| (max innerHeight rhymeHeight) + 2)
 
 -- | Shift an image vertically by a specified amount, changing the rhyme
 -- and throat position to compensate.
