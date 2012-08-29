@@ -91,7 +91,7 @@ data RhymeUnit = RhymeUnit
 renderRhyme :: RenderImpl r => Int -> Rhyme -> r
 renderRhyme throatY = foldMap renderOne
   where
-    renderOne (RhymeUnit src dest) = drawLine (0 :| throatY - fromInteger src) (1 :| dest)
+    renderOne (RhymeUnit index dest) = drawLine (0 :| throatY - fromInteger index) (1 :| dest)
 
 data Result r = Result
     { resultImage :: r
@@ -138,23 +138,23 @@ renderWithThroat
     :: RenderImpl r
     => Int -- ^ Length of the throat line. This should be positive.
     -> Exp Integer -> Result r
-renderWithThroat throatLength e = Result image' size' rhyme throatY
+renderWithThroat throatLength e = Result image size rhyme throatY
   where
-    Result image size rhyme throatY = renderRhythm e
+    Result image' size' rhyme throatY = renderRhythm e
     -- Shift the main image to the left, then draw a line next to it
-    image' = relativeTo (-throatLength :| 0) image <> throatLine
+    image = relativeTo (-throatLength :| 0) image' <> throatLine
     throatLine = drawLine (-throatLength :| throatY) (0 :| throatY)
-    size' = size |+| (throatLength :| 0)
+    size = size' |+| (throatLength :| 0)
 
 -- | Render a lambda expression.
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
 renderLambda e' = Result image size rhyme throatY
   where
+    Result image' size' innerRhyme throatY
+        = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
     image = drawBox (negateP size) size throatY
             <> relativeTo (-width :| 0) (renderRhyme throatY innerRhyme)
             <> image'
-    Result image' size' innerRhyme throatY
-        = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
     rhyme = zipWith RhymeUnit
                 [pred index | RhymeUnit index _ <- innerRhyme, index > 0]
                 [throatY-1, throatY-2 ..]
@@ -171,7 +171,7 @@ shiftY dy (Result image size rhyme throatY)
     throatY' = throatY + dy
 
     shiftRhyme :: RhymeUnit -> RhymeUnit
-    shiftRhyme (RhymeUnit src dest) = RhymeUnit src (dest + dy)
+    shiftRhyme (RhymeUnit index dest) = RhymeUnit index (dest + dy)
 
 extendRhyme :: RenderImpl r => Int -> Int -> Rhyme -> r
 extendRhyme srcX destX = foldMap $ drawLine
