@@ -18,15 +18,13 @@ module Sylvia.Renderer.Impl
       RenderImpl(..)
 
     -- * Menagerie
-    , renderRhyme
-    , RhymeUnit(..)
     , renderRhythm
     , Result(..)
     ) where
 
 import Control.Applicative
 import Data.Foldable ( foldMap )
-import Data.List ( nub )
+import Data.List ( foldl' )
 import Data.Monoid
 
 import Sylvia.Model
@@ -89,11 +87,6 @@ data RhymeUnit = RhymeUnit
     }
   deriving (Show)
 
-renderRhyme :: RenderImpl r => Int -> Rhyme -> r
-renderRhyme throatY = foldMap renderOne
-  where
-    renderOne (RhymeUnit index dest) = drawLine (0 :| throatY - fromInteger index) (1 :| dest)
-
 data Result r = Result
     { resultImage :: r
       -- ^ The rendered image.
@@ -154,13 +147,31 @@ renderLambda e' = Result image size rhyme throatY
     Result image' (innerWidth :| innerHeight) innerRhyme throatY
         = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
     image = drawBox (negateP size) size throatY
-            <> relativeTo (-width :| 0) (renderRhyme throatY innerRhyme)
+            <> relativeTo (-width :| 0) rhymeImage
             <> image'
-    rhyme = zipWith RhymeUnit
-                [pred index | RhymeUnit index _ <- innerRhyme, index > 0]
-                [throatY-1, throatY-2 ..]
-    rhymeHeight = length . nub $ map ruIndex rhyme
+    (rhymeImage, rhyme) = renderRhyme throatY innerRhyme
+    rhymeHeight = fromInteger . maximumOr 0 $ map ruIndex innerRhyme
     size@(width :| _) = (innerWidth + 1 :| (max innerHeight rhymeHeight) + 2)
+
+-- | Like 'maximum', but returns a default value on an empty list rather
+-- than throwing a hissy fit.
+maximumOr :: Ord a => a -> [a] -> a
+maximumOr def = foldl' max def
+
+-- | Render an expression's rhyme.
+renderRhyme
+    :: RenderImpl r
+    => Int        -- ^ Throat offset (see 'resultThroatY')
+    -> Rhyme      -- ^ The inner expression's rhyme
+    -> (r, Rhyme) -- ^ The resulting image, along with the outer rhyme
+renderRhyme throatY innerRhyme = (foldMap renderOne innerRhyme, outerRhyme)
+  where
+    renderOne (RhymeUnit index dest) = drawLine (0 :| throatY - fromInteger index) (1 :| dest)
+    outerRhyme =
+        [ RhymeUnit (pred index) (throatY - fromInteger index)
+        | RhymeUnit index _ <- innerRhyme
+        , index > 0
+        ]
 
 -- | Shift an image vertically by a specified amount, changing the rhyme
 -- and throat position to compensate.
