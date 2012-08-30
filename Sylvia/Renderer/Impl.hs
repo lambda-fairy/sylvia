@@ -10,22 +10,32 @@
 -- 1. An interface, 'RenderImpl', that all rendering methods must
 --    implement.
 --
--- 2. A menagerie of functions that use this interface.
+-- 2. A function, 'render', that uses the aforementioned interface to
+--    draw a pretty picture.
+--
+-- 3. Another function, 'render\'', that spews its internals all over
+--    the place.
 
 module Sylvia.Renderer.Impl
     (
-    -- * Interface
+    -- * An interface
       RenderImpl(..)
 
-    -- * Menagerie
-    , renderRhythm
+    -- * A function
+    , render
+
+    -- * Another function
+    , render'
     , Result(..)
+    , Rhyme
+    , RhymeUnit(..)
     ) where
 
 import Control.Applicative
 import Data.Foldable ( foldMap )
 import Data.List ( foldl' )
 import Data.Monoid
+import Data.Void ( Void, vacuous )
 
 import Sylvia.Model
 import Sylvia.Renderer.Pair
@@ -87,20 +97,33 @@ data RhymeUnit = RhymeUnit
     }
   deriving (Show)
 
+-- | The result of a rendering operation.
 data Result r = Result
     { resultImage :: r
       -- ^ The rendered image.
     , resultSize  :: PInt
-      -- ^ The size of the image's bounding box.
+      -- ^ The size of the image's bounding box in grid units, when all
+      -- round things are removed.
     , resultRhyme :: Rhyme
       -- ^ The expression's rhyme.
     , resultThroatY :: Int
-      -- ^ The Y offset of the expression's ear and throat.
+      -- ^ The Y offset of the expression's ear and throat, measured
+      -- from the /bottom/ of its bounding box.
     }
   deriving (Show)
 
-renderRhythm :: RenderImpl r => Exp Integer -> Result r
-renderRhythm e = case e of
+-- | Render an expression, returning an image along with its size.
+render :: RenderImpl r => Exp Void -> (r, PInt)
+render e =
+    let Result image size rhyme _ = render' $ vacuous e
+    in case rhyme of
+        [] -> (image, size)
+        _  -> error $ "render: the impossible happened -- "
+                        ++ "extra free variables: " ++ show rhyme
+
+-- | Render an expression, with extra juicy options.
+render' :: RenderImpl r => Exp Integer -> Result r
+render' e = case e of
     Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0] 0
     Lam e'  -> renderLambda e'
     App a b -> Result image size rhyme bThroatY
@@ -118,9 +141,9 @@ renderRhythm e = case e of
             , drawDot (0 :| bThroatY)
             ]
         Result aImage (aWidth :| aHeight) aRhyme aThroatY
-            = shiftY (-1 - bHeight) $ renderWithThroat bWidth a
+            = shiftY (-1 - bHeight) $ renderWithThroatLine bWidth a
         Result bImage (bWidth :| bHeight) bRhyme bThroatY
-            = renderWithThroat 1 b
+            = renderWithThroatLine 1 b
         size = (aWidth :| aHeight + bHeight + 1)
         rhyme = aRhyme ++ bRhyme
 
@@ -128,24 +151,24 @@ renderRhythm e = case e of
 -- throat. Doesn't sound too comfortable, to be honest.
 --
 -- The 'resultSize' includes the length of this extra line.
-renderWithThroat
+renderWithThroatLine
     :: RenderImpl r
     => Int -- ^ Length of the throat line. This should be positive.
     -> Exp Integer -> Result r
-renderWithThroat throatLength e = Result image size rhyme throatY
+renderWithThroatLine lineLength e = Result image size rhyme throatY
   where
-    Result image' size' rhyme throatY = renderRhythm e
+    Result image' size' rhyme throatY = render' e
     -- Shift the main image to the left, then draw a line next to it
-    image = relativeTo (-throatLength :| 0) image' <> throatLine
-    throatLine = drawLine (-throatLength :| throatY) (0 :| throatY)
-    size = size' |+| (throatLength :| 0)
+    image = relativeTo (-lineLength :| 0) image' <> throatLine
+    throatLine = drawLine (-lineLength :| throatY) (0 :| throatY)
+    size = size' |+| (lineLength :| 0)
 
 -- | Render a lambda expression.
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
 renderLambda e' = Result image size rhyme throatY
   where
     Result image' (innerWidth :| innerHeight) innerRhyme throatY
-        = shiftY (-1) . renderWithThroat 1 $ fmap shiftDown e'
+        = shiftY (-1) . renderWithThroatLine 1 $ fmap shiftDown e'
     image = drawBox (negateP size) size throatY
             <> relativeTo (-width :| 0) rhymeImage
             <> image'

@@ -16,7 +16,6 @@ import Control.Applicative
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Monoid ( Monoid(..), (<>) )
-import Data.Void ( vacuous )
 import Graphics.Rendering.Cairo
 
 import Sylvia.Renderer.Impl
@@ -116,8 +115,8 @@ testRender :: IO ()
 testRender = uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
   where
     step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
-      where Result image' (w' :| h') _ _ = renderRhythm e
-    es = map (vacuous . fromRight . parseExp . map (replace 'L' '\\')) $
+      where (image', (w' :| h')) = render e
+    es = map (fromRight . parseExp . map (replace 'L' '\\')) $
         [ "L 0"
         , "LL 1"
         , "LL 0"
