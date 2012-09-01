@@ -54,6 +54,10 @@ class Monoid r => RenderImpl r where
     -- | Draw a line segment from one point to another.
     drawLine :: PInt -> PInt -> r
 
+    -- | Draw a line, but instead of drawing a diagonal line, draw a
+    -- zigzag instead.
+    drawZigzag :: PInt -> PInt -> r
+
     -- | Draw a simple circle segment, centered at a point.
     drawCircleSegment
         :: PInt   -- ^ Center point
@@ -161,7 +165,7 @@ renderWithThroatLine outerIsLam lineLength e = Result image size rhyme throatY
     Result image' size' rhyme throatY' = render' e
     -- Shift the main image to the left, then draw a line next to it
     image = relativeTo (-lineLength :| 0) image' <> throatLine
-    throatLine = drawLine (-lineLength :| throatY') (0 :| throatY)
+    throatLine = drawZigzag (-lineLength :| throatY') (0 :| throatY)
     throatY = if outerIsLam && isLambda e then throatY' - 1 else throatY'
     size = size' |+| (lineLength :| 0)
 

@@ -83,6 +83,19 @@ instance RenderImpl Image where
             setLineWidth 1
             stroke
 
+    drawZigzag src dest = I $ do
+        x1 :| y1 <- addHalf <$> getAbsolute src
+        x2 :| y2 <- addHalf <$> getAbsolute dest
+        let xmid = (x1 + x2) / 2
+        cairo $ do
+            newPath
+            moveTo x1 y1
+            lineTo xmid y1
+            lineTo xmid y2
+            lineTo x2 y2
+            setLineWidth 1
+            stroke
+
     drawCircleSegment center start end = I $ do
         cx :| cy <- getAbsolute center
         -- A dot's diameter is approximately equal to one vertical grid unit
