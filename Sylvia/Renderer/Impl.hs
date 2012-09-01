@@ -141,9 +141,9 @@ render' e = case e of
             , drawDot (0 :| bThroatY)
             ]
         Result aImage (aWidth :| aHeight) aRhyme aThroatY
-            = shiftY (-1 - bHeight) $ renderWithThroatLine bWidth a
+            = shiftY (-1 - bHeight) $ renderWithThroatLine False bWidth a
         Result bImage (bWidth :| bHeight) bRhyme bThroatY
-            = renderWithThroatLine 1 b
+            = renderWithThroatLine False 1 b
         size = (aWidth :| aHeight + bHeight + 1)
         rhyme = aRhyme ++ bRhyme
 
@@ -153,22 +153,28 @@ render' e = case e of
 -- The 'resultSize' includes the length of this extra line.
 renderWithThroatLine
     :: RenderImpl r
-    => Int -- ^ Length of the throat line. This should be positive.
+    => Bool -- ^ Whether the enclosing expression is a lambda.
+    -> Int  -- ^ Length of the throat line. This should be positive.
     -> Exp Integer -> Result r
-renderWithThroatLine lineLength e = Result image size rhyme throatY
+renderWithThroatLine outerIsLam lineLength e = Result image size rhyme throatY
   where
-    Result image' size' rhyme throatY = render' e
+    Result image' size' rhyme throatY' = render' e
     -- Shift the main image to the left, then draw a line next to it
     image = relativeTo (-lineLength :| 0) image' <> throatLine
-    throatLine = drawLine (-lineLength :| throatY) (0 :| throatY)
+    throatLine = drawLine (-lineLength :| throatY') (0 :| throatY)
+    throatY = if outerIsLam && isLambda e then throatY' - 1 else throatY'
     size = size' |+| (lineLength :| 0)
+
+isLambda :: Exp a -> Bool
+isLambda (Lam _) = True
+isLambda _       = False
 
 -- | Render a lambda expression.
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
 renderLambda e' = Result image size rhyme throatY
   where
     Result image' (innerWidth :| innerHeight) innerRhyme throatY
-        = shiftY (-1) . renderWithThroatLine 1 $ fmap shiftDown e'
+        = shiftY (-1) . renderWithThroatLine True 1 $ fmap shiftDown e'
     image = drawBox (negateP size) size throatY
             <> relativeTo (-width :| 0) rhymeImage
             <> image'
