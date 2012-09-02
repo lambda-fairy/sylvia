@@ -36,6 +36,7 @@ Executable sylvia
         , transformers
         , void   >= 0.5.5 && < 0.6
         , cairo
+        , gtk
 
     GHC-Options: -Wall
 

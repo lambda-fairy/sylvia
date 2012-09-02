@@ -5,9 +5,8 @@ module Main
 import Control.Monad ( forever )
 import System.IO ( hPutStr, stderr )
 
-import Sylvia.Model
 import Sylvia.Text.Parser
-import Sylvia.Text.PrettyPrint
+import Sylvia.UI.GTK
 
 main :: IO ()
 main = forever $ do
@@ -15,4 +14,4 @@ main = forever $ do
     input <- getLine
     case parseExp input of
         Left  err -> putStrLn $ show err
-        Right res -> putStrLn $ pprintExp $ evalHNF res
+        Right res -> showInWindow res
