@@ -92,9 +92,6 @@ type Rhyme = [RhymeUnit]
 -- | Specifies a /rhyme line/: a straight line protruding from the left
 -- edge of a bounding box, connecting a variable to the sub-expression
 -- that uses it.
---
--- @RhymeUnit index dest@ will be rendered as a line from (0, -index) to
--- (1, dest), where (0, 0) is the position of the outer box's ear.
 data RhymeUnit = RhymeUnit
     { ruIndex :: Integer
     , ruDest  :: Int
