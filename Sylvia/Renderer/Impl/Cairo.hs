@@ -9,12 +9,24 @@
 
 module Sylvia.Renderer.Impl.Cairo
     (
-      testRender
+    -- * Types
+      Image
+    , runImage
+    , runImage'
+    , Context(..)
+
+    -- * Testing
+    , testRender
+
+    -- * Re-exports
+    , module Sylvia.Renderer.Impl
     ) where
 
 import Control.Applicative
+import Control.Arrow ( (***) )
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
+import Data.Default
 import Data.Monoid ( Monoid(..), (<>) )
 import Graphics.Rendering.Cairo
 
@@ -26,8 +38,11 @@ newtype Image = I { unI :: ImageM () }
 
 type ImageM = ReaderT Context Render
 
-runImage :: Image -> Context -> Render ()
-runImage (I action) = runReaderT action
+runImage :: Context -> Image -> Render ()
+runImage ctx = flip runReaderT ctx . unI
+
+runImage' :: Context -> (Image, PInt) -> (Render (), PInt)
+runImage' ctx = runImage ctx *** (ctxGridSize ctx |*|)
 
 -- | Lift a rendering action into the 'ImageM' monad, wrapping it in
 -- calls to 'save' and 'restore' to stop its internal state from leaking
@@ -43,6 +58,9 @@ data Context = C
     { ctxGridSize :: PInt
     , ctxOffset   :: PInt
     }
+
+instance Default Context where
+    def = C { ctxGridSize = (20 :| 10), ctxOffset = (0 :| 0) }
 
 -- | Map a relative coordinate to an absolute one, scaling and shifting
 -- it in the process.
@@ -117,19 +135,18 @@ dumpPNG size action = withImageSurface FormatRGB24 w h $ \surface -> do
     renderWith surface $ setSourceRGB 1 1 1 >> paint
     -- Render ALL the things
     let action' = relativeTo (1 :| 1) action
-    renderWith surface $ runImage action' (C defaultGridSize (0 :| 0))
+    renderWith surface $ runImage def action'
     -- Save the image
     surfaceWriteToPNG surface "result.png"
   where
-    defaultGridSize = 20 :| 10
-    w :| h = defaultGridSize |*| (size |+| (2 :| 2)) -- padding
+    w :| h = ctxGridSize def |*| (size |+| (2 :| 2)) -- padding
 
 testRender :: IO ()
 testRender = uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
   where
     step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
       where (image', (w' :| h')) = render e
-    es = map (fromRight . parseExp . map (replace 'L' '\\')) $
+    es = map (fromRight . parseExp) $
         [ "L 0"
         , "LL 1"
         , "LL 0"
@@ -142,8 +159,3 @@ fromRight :: Show e => Either e a -> a
 fromRight e = case e of
     Left sinister -> error $ "Unexpected Left: " ++ show sinister
     Right dextrous -> dextrous
-
-replace :: Eq a => a -> a -> a -> a
-replace target repl input
-  | input == target = repl
-  | otherwise       = input

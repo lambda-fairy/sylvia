@@ -35,35 +35,27 @@ parseExp = parse expression' "sylvia"
 
 type Parser = Parsec String ()
 
-expression, term, bracketed, reference, abstraction :: Integer -> Parser (Exp Integer)
+expression, term, bracketed, reference, abstraction
+    :: Integer -- ^ The number of variables in scope.
+    -> Parser (Exp Integer)
 
--- Note:
--- That mysterious extra Integer argument is supposed to represent the
--- number of variables in scope. When the parser hits a lambda
--- abstraction it increments the value.
-
--- An expression is a list of terms, applied from left to right.
 expression i = foldl1 App <$> many1 (term i)
 
--- A term is either...
-term i = try spaces    -- (skipping leading spaces first, of course)
-    *> (bracketed i    -- a parenthesized expression;
-    <|> reference i    -- a variable reference;
-    <|> abstraction i) -- or a lambda abstraction.
+term i = try spaces
+    *> (bracketed i
+    <|> reference i
+    <|> abstraction i)
 
--- A bracketed expression: left bracket, expression, right bracket.
 bracketed i = char '(' *> expression i <* spaces <* char ')'
     <?> "bracketed term"
 
--- A variable reference: read in a whole number, checking if it's a
--- valid index (see note).
 reference i = Ref <$> (checkInRange =<< read <$> many1 digit)
     <?> "de Bruijn index"
   where
+    -- Reject an index if it refers to a free variable
     checkInRange index
       | index < i = return index
-      | otherwise = fail $ "index " ++ show index ++ " out of range"
+      | otherwise = parserFail $ "index " ++ show index ++ " out of range"
 
--- A lambda expression: a backslash, followed by the function body.
-abstraction i = abstract shiftUp <$> (char '\\' *> expression (i+1))
+abstraction i = abstract shiftUp <$> (oneOf "L\\" *> expression (i+1))
     <?> "lambda abstraction"
