@@ -15,7 +15,7 @@
 -- > fixpoint: \ (\ 1 (0 0)) (\ 1 (0 0))
 --
 -- All variables must have a corresponding lambda, i.e. be bound
--- variables. This means expressions such as @\ 9000@ will be rejected.
+-- variables. This means expressions such as @\\ 9001@ will be rejected.
 
 module Sylvia.Text.Parser
     (
