@@ -2,16 +2,16 @@ module Main
     ( main
     ) where
 
-import Control.Monad ( forever )
-import System.IO ( hPutStr, stderr )
+import System.Environment ( getArgs )
 
 import Sylvia.Text.Parser
 import Sylvia.UI.GTK
 
 main :: IO ()
-main = forever $ do
-    hPutStr stderr "sylvia> "
-    input <- getLine
-    case parseExp input of
-        Left  err -> putStrLn $ show err
-        Right res -> showInWindow res
+main = do
+    args <- getArgs
+    case args of
+        [input] -> case parseExp input of
+            Left  err -> putStrLn $ show err
+            Right res -> showInWindow res
+        _ -> putStrLn "Usage: sylvia 'expression'"
