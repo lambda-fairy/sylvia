@@ -37,6 +37,15 @@ Executable sylvia
         , cairo
         , gtk
 
+    Other-Modules:
+        Sylvia.Model
+        Sylvia.Renderer.Impl
+        Sylvia.Renderer.Impl.Cairo
+        Sylvia.Renderer.Pair
+        Sylvia.Text.Parser
+        Sylvia.Text.PrettyPrint
+        Sylvia.UI.GTK
+
     GHC-Options: -Wall
 
 
