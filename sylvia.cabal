@@ -30,7 +30,6 @@ Executable sylvia
     Main-Is:     Main.hs
     Build-Depends:
           base   == 4.*
-        , containers
         , data-default
         , parsec >= 3.1.2 && < 3.2
         , transformers
