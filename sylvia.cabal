@@ -22,7 +22,7 @@ License-File:        LICENSE
 Copyright:           2011 Chris Wong
 
 Build-Type:          Simple
-Extra-Source-Files:  README.markdown
+Extra-Source-Files:  README.mkd
 Cabal-Version:       >= 1.8
 
 

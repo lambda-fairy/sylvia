@@ -5,16 +5,16 @@
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : portable
 --
--- This module provides two things:
+-- This module provides three things:
 --
 -- 1. An interface, 'RenderImpl', that all rendering methods must
---    implement.
+--    implement;
 --
 -- 2. A function, 'render', that uses the aforementioned interface to
---    draw a pretty picture.
+--    draw a pretty picture;
 --
--- 3. Another function, 'render\'', that spews its internals all over
---    the place.
+-- 3. Another function, 'render'', that spews its internals all over the
+--    place.
 
 module Sylvia.Renderer.Impl
     (
