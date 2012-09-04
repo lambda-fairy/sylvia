@@ -163,12 +163,14 @@ renderWithThroatLine outerIsLam lineLength e = Result image size rhyme throatY
     -- Shift the main image to the left, then draw a line next to it
     image = relativeTo (-lineLength :| 0) image' <> throatLine
     throatLine = drawZigzag (-lineLength :| throatY') (0 :| throatY)
-    throatY = if outerIsLam && isLambda e then throatY' - 1 else throatY'
+    throatY = if outerIsLam && containsLam e then throatY' - 1 else throatY'
     size = size' |+| (lineLength :| 0)
 
-isLambda :: Exp a -> Bool
-isLambda (Lam _) = True
-isLambda _       = False
+containsLam :: Exp a -> Bool
+containsLam e = case e of
+    Ref _ -> False
+    Lam _ -> True
+    App _ b -> containsLam b
 
 -- | Render a lambda expression.
 renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
