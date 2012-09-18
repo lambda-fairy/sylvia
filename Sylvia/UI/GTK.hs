@@ -24,8 +24,8 @@ import Sylvia.Renderer.Impl.Cairo
 title :: String
 title = "Sylvia"
 
-showInWindow :: Exp Void -> IO ()
-showInWindow e = do
+showInWindow :: [Exp Void] -> IO ()
+showInWindow es = do
     "Initializing GTK" -:- do
         initGUI
 
@@ -40,25 +40,25 @@ showInWindow e = do
 
     "Creating canvas" -:- do
         canvas <- drawingAreaNew
-        let (_, (w :| h)) = renderCairo e
+        let (_, (w :| h)) = renderCairo es
         widgetSetSizeRequest canvas w h
         set window [ containerChild := canvas ]
-        canvas `on` exposeEvent $ updateCanvas e
+        canvas `on` exposeEvent $ updateCanvas es
 
     "Show ALL the things!" -:- do
         widgetShowAll window
         mainGUI
 
-updateCanvas :: Exp Void -> EventM EExpose Bool
-updateCanvas e = do
+updateCanvas :: [Exp Void] -> EventM EExpose Bool
+updateCanvas es = do
     win <- eventWindow
     liftIO $ do
-        let (action, _) = renderCairo e
+        let (action, _) = renderCairo es
         renderWithDrawable win action
     return True
 
-renderCairo :: Exp Void -> (Render (), PInt)
-renderCairo = runImageWithPadding def . render
+renderCairo :: [Exp Void] -> (Render (), PInt)
+renderCairo = runImageWithPadding def . stackHorizontally . map render
 
 infixr 1 -:-
 (-:-) :: String -> IO a -> IO a

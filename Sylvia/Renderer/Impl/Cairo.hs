@@ -11,9 +11,12 @@ module Sylvia.Renderer.Impl.Cairo
     (
     -- * Types
       Image
+    , Context(..)
+
+    -- * Drawing the image
     , runImage
     , runImageWithPadding
-    , Context(..)
+    , writePNG
 
     -- * Testing
     , testRender
@@ -26,7 +29,7 @@ import Control.Applicative
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Default
-import Data.Monoid ( Monoid(..), (<>) )
+import Data.Monoid (Monoid(..))
 import Graphics.Rendering.Cairo
 
 import Sylvia.Renderer.Impl
@@ -150,23 +153,20 @@ instance RenderImpl Image where
         addOffset ctx@C{ ctxOffset = offset }
           = ctx{ ctxOffset = offset |+| delta }
 
-dumpPNG :: (Image, PInt) -> IO ()
-dumpPNG imagePack = withImageSurface FormatRGB24 w h $ \surface -> do
+writePNG :: FilePath -> (Image, PInt) -> IO ()
+writePNG filename imagePack = withImageSurface FormatRGB24 w h $ \surface -> do
     -- Fill the background with white
     renderWith surface $ setSourceRGB 1 1 1 >> paint
     -- Render ALL the things
     renderWith surface $ action
     -- Save the image
-    surfaceWriteToPNG surface "result.png"
+    surfaceWriteToPNG surface filename
   where
     (action, (w :| h)) = runImageWithPadding def imagePack
 
 testRender :: IO ()
-testRender = dumpPNG $ foldr step (mempty, 0 :| 0) es
+testRender = writePNG "result.png" . stackHorizontally $ map render es
   where
-    step e (image, (w :| h)) = (image <> relativeTo ((-w - 1) :| 0) image',
-                                (w + w' + 2) :| max h h')
-      where (image', (w' :| h')) = render e
     es = map (fromRight . parseExp) $
         [ "L 0"
         , "LL 1"

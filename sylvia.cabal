@@ -33,6 +33,7 @@ Executable sylvia
         , data-default
         , optparse-applicative == 0.4.*
         , parsec >= 3.1.2 && < 3.2
+        , semigroups
         , transformers
         , void   >= 0.5.5 && < 0.6
         , cairo

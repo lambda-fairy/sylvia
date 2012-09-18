@@ -4,8 +4,10 @@ module Main
     ( main
     ) where
 
+import qualified Data.List.NonEmpty as NE
 import Options.Applicative
 
+import Sylvia.Renderer.Impl.Cairo
 import Sylvia.Text.Parser
 import Sylvia.UI.GTK
 
@@ -20,36 +22,35 @@ main = execParser opts >>= process
 
 process :: Sylvia -> IO ()
 process (Sylvia{..}) = do
-    case parseExp input of
+    case mapM parseExp $ NE.toList inputs of
         Left derp -> print derp
-        Right e -> case outputFile of
-            Nothing -> showInWindow e
-            Just filename -> putStrLn "Insert code here"
+        Right es -> case outputFile of
+            Nothing -> showInWindow es
+            Just filename
+                -> writePNG filename . stackHorizontally $ map render es
 
 data Sylvia = Sylvia
     { outputFile :: Maybe FilePath
-    , input :: String
+    , inputs :: NE.NonEmpty String
     }
   deriving (Show)
 
 sylvia :: Parser Sylvia
 sylvia = Sylvia
-    <$> maybeP $: strOption
+    <$> option
         ( long "output"
         & short 'o'
         & metavar "FILENAME"
         & help "Write the result to a PNG image"
+        & value Nothing
+        & reader (\s -> if null s then Nothing else Just (Just s))
         )
-    <*> argument Just
-        ( metavar "EXPRESSION"
-        & help "Expression to render, in zero-based De Bruijn index notation"
-        )
-
--- | Modify the parser so it returns Nothing instead of blowing up.
-maybeP :: Parser a -> Parser (Maybe a)
-maybeP p = (Just <$> p) <|> pure Nothing
-
--- | A more tightly binding version of '$'.
-($:) :: (a -> b) -> a -> b
-($:) = ($)
-infixr 9 $:
+    <*> expressions
+  where
+    expressions = (NE.:|)
+        <$> argument Just
+            ( metavar "EXPR"
+            & help "Expressions to render, in zero-based De Bruijn index notation"
+            )
+        <*> arguments Just
+            ( metavar "EXPR" )
