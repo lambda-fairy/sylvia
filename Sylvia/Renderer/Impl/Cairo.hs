@@ -150,22 +150,22 @@ instance RenderImpl Image where
         addOffset ctx@C{ ctxOffset = offset }
           = ctx{ ctxOffset = offset |+| delta }
 
-dumpPNG :: PInt -> Image -> IO ()
-dumpPNG size action = withImageSurface FormatRGB24 w h $ \surface -> do
+dumpPNG :: (Image, PInt) -> IO ()
+dumpPNG imagePack = withImageSurface FormatRGB24 w h $ \surface -> do
     -- Fill the background with white
     renderWith surface $ setSourceRGB 1 1 1 >> paint
     -- Render ALL the things
-    let action' = relativeTo (1 :| 1) action
-    renderWith surface $ runImage def action'
+    renderWith surface $ action
     -- Save the image
     surfaceWriteToPNG surface "result.png"
   where
-    w :| h = ctxGridSize def |*| (size |+| (2 :| 2)) -- padding
+    (action, (w :| h)) = runImageWithPadding def imagePack
 
 testRender :: IO ()
-testRender = uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
+testRender = dumpPNG $ foldr step (mempty, 0 :| 0) es
   where
-    step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
+    step e (image, (w :| h)) = (image <> relativeTo ((-w - 1) :| 0) image',
+                                (w + w' + 2) :| max h h')
       where (image', (w' :| h')) = render e
     es = map (fromRight . parseExp) $
         [ "L 0"
