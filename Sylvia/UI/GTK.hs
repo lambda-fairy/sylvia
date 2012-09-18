@@ -53,13 +53,12 @@ updateCanvas :: Exp Void -> EventM EExpose Bool
 updateCanvas e = do
     win <- eventWindow
     liftIO $ do
-        let (action, size) = renderCairo e
-        let (w :| h) = fmap fromIntegral $ size |+| ctxGridSize def
-        renderWithDrawable win $ translate w h >> action
+        let (action, _) = renderCairo e
+        renderWithDrawable win action
     return True
 
 renderCairo :: Exp Void -> (Render (), PInt)
-renderCairo = runImage' def . render
+renderCairo = runImageWithPadding def . render
 
 infixr 1 -:-
 (-:-) :: String -> IO a -> IO a

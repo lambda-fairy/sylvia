@@ -12,7 +12,7 @@ module Sylvia.Renderer.Impl.Cairo
     -- * Types
       Image
     , runImage
-    , runImage'
+    , runImageWithPadding
     , Context(..)
 
     -- * Testing
@@ -23,7 +23,6 @@ module Sylvia.Renderer.Impl.Cairo
     ) where
 
 import Control.Applicative
-import Control.Arrow ( (***) )
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Default
@@ -38,11 +37,26 @@ newtype Image = I { unI :: ImageM () }
 
 type ImageM = ReaderT Context Render
 
+-- | Render an image.
+--
+-- The resulting image's throat will be at (0, 0); in practice, this will
+-- mean that if the result is run directly, most of the image would be
+-- off the page. To fix this, use the 'translate' function or call
+-- 'runImageWithPadding' instead.
 runImage :: Context -> Image -> Render ()
 runImage ctx = flip runReaderT ctx . unI
 
-runImage' :: Context -> (Image, PInt) -> (Render (), PInt)
-runImage' ctx = runImage ctx *** (ctxGridSize ctx |*|)
+-- | Render an image, translating it so its top-left corner is at (0, 0).
+--
+-- If you only want to render the thing, this is the function to use.
+runImageWithPadding
+    :: Context
+    -> (Image, PInt)     -- The image, along with its size in grid units
+    -> (Render (), PInt) -- Rendering action, with its size in pixels
+runImageWithPadding ctx (image, innerSize) = (action, realSize)
+  where
+    action = runImage ctx $ relativeTo (innerSize |+| (1 :| 1)) image
+    realSize = ctxGridSize ctx |*| (innerSize |+| (2 :| 2))
 
 -- | Lift a rendering action into the 'ImageM' monad, wrapping it in
 -- calls to 'save' and 'restore' to stop its internal state from leaking
