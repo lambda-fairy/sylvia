@@ -11,12 +11,11 @@ See the [wiki][] for documentation.
 Quick start
 -----------
 
-    git clone git://github.com/chrisyco/sylvia
+    git clone git://github.com/lfairy/sylvia
     cd sylvia
-    cabal configure --enable-tests
+    cabal configure
     cabal install --only-dependencies
     cabal build
-    cabal test
     dist/build/sylvia
 
 See [Building from source][] for more detailed instructions.
