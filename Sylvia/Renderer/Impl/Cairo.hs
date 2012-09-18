@@ -68,9 +68,16 @@ cairo action = lift $ do
     restore
     return result
 
+-- | A 'Context' contains the environment required for rendering an
+-- expression.
 data Context = C
     { ctxGridSize :: PInt
+      -- ^ The size of one grid unit. Whenever the rendering code
+      -- specifies a coordinate, it is multiplied by this factor before
+      -- it is drawn on the screen.
     , ctxOffset   :: PInt
+      -- ^ The origin of the image. You shouldn't need to fiddle with
+      -- this directly – try 'relativeTo' instead.
     }
 
 instance Default Context where
