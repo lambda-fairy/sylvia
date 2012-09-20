@@ -4,7 +4,6 @@ module Main
     ( main
     ) where
 
-import qualified Data.List.NonEmpty as NE
 import Options.Applicative
 
 import Sylvia.Renderer.Impl.Cairo
@@ -22,35 +21,29 @@ main = execParser opts >>= process
 
 process :: Sylvia -> IO ()
 process (Sylvia{..}) = do
-    case mapM parseExp $ NE.toList inputs of
+    case parseExp input of
         Left derp -> print derp
-        Right es -> case outputFile of
-            Nothing -> showInWindow es
-            Just filename
-                -> writePNG filename . stackHorizontally $ map render es
+        Right e -> case outputFile of
+            Nothing -> showInWindow [e]
+            Just filename -> writePNG filename $ render e
 
 data Sylvia = Sylvia
     { outputFile :: Maybe FilePath
-    , inputs :: NE.NonEmpty String
+    , input :: String
     }
   deriving (Show)
 
 sylvia :: Parser Sylvia
 sylvia = Sylvia
-    <$> option
+    <$> nullOption
         ( long "output"
         & short 'o'
         & metavar "FILENAME"
         & help "Write the result to a PNG image"
         & value Nothing
-        & reader (\s -> if null s then Nothing else Just (Just s))
+        & reader (Just . Just)
         )
-    <*> expressions
-  where
-    expressions = (NE.:|)
-        <$> argument Just
-            ( metavar "EXPR"
-            & help "Expressions to render, in zero-based De Bruijn index notation"
-            )
-        <*> arguments Just
-            ( metavar "EXPR" )
+    <*> argument Just
+        ( metavar "EXPR"
+        & help "Expression to render, in zero-based De Bruijn index notation"
+        )
