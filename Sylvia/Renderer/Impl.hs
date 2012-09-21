@@ -29,6 +29,9 @@ module Sylvia.Renderer.Impl
     , Result(..)
     , Rhyme
     , RhymeUnit(..)
+
+    -- * Miscellany
+    , stackHorizontally
     ) where
 
 import Control.Applicative
@@ -222,3 +225,10 @@ extendRhyme :: RenderImpl r => Int -> Int -> Rhyme -> r
 extendRhyme srcX destX = foldMap $ drawLine
                                     <$> (srcX  :|) . ruDest
                                     <*> (destX :|) . ruDest
+
+-- | Take a list of images and line them up in a row.
+stackHorizontally :: RenderImpl r => [(r, PInt)] -> (r, PInt)
+stackHorizontally = foldr step (mempty, 0 :| 0)
+  where
+    step (image', (w' :| h')) (image, (w :| h))
+        = (relativeTo ((-w - 1) :| 0) image' <> image, (w + w' + 2) :| max h h')

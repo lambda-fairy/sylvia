@@ -31,6 +31,7 @@ Executable sylvia
     Build-Depends:
           base   == 4.*
         , data-default
+        , optparse-applicative == 0.4.*
         , parsec >= 3.1.2 && < 3.2
         , transformers
         , void   >= 0.5.5 && < 0.6

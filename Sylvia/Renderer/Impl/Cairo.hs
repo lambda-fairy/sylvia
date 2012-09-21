@@ -11,9 +11,12 @@ module Sylvia.Renderer.Impl.Cairo
     (
     -- * Types
       Image
-    , runImage
-    , runImage'
     , Context(..)
+
+    -- * Drawing the image
+    , runImage
+    , runImageWithPadding
+    , writePNG
 
     -- * Testing
     , testRender
@@ -23,11 +26,10 @@ module Sylvia.Renderer.Impl.Cairo
     ) where
 
 import Control.Applicative
-import Control.Arrow ( (***) )
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Default
-import Data.Monoid ( Monoid(..), (<>) )
+import Data.Monoid (Monoid(..))
 import Graphics.Rendering.Cairo
 
 import Sylvia.Renderer.Impl
@@ -38,11 +40,26 @@ newtype Image = I { unI :: ImageM () }
 
 type ImageM = ReaderT Context Render
 
+-- | Render an image.
+--
+-- The resulting image's throat will be at (0, 0); in practice, this will
+-- mean that if the result is run directly, most of the image would be
+-- off the page. To fix this, use the 'translate' function or call
+-- 'runImageWithPadding' instead.
 runImage :: Context -> Image -> Render ()
 runImage ctx = flip runReaderT ctx . unI
 
-runImage' :: Context -> (Image, PInt) -> (Render (), PInt)
-runImage' ctx = runImage ctx *** (ctxGridSize ctx |*|)
+-- | Render an image, translating it so its top-left corner is at (0, 0).
+--
+-- If you only want to render the thing, this is the function to use.
+runImageWithPadding
+    :: Context
+    -> (Image, PInt)     -- The image, along with its size in grid units
+    -> (Render (), PInt) -- Rendering action, with its size in pixels
+runImageWithPadding ctx (image, innerSize) = (action, realSize)
+  where
+    action = runImage ctx $ relativeTo (innerSize |+| (1 :| 1)) image
+    realSize = ctxGridSize ctx |*| (innerSize |+| (2 :| 2))
 
 -- | Lift a rendering action into the 'ImageM' monad, wrapping it in
 -- calls to 'save' and 'restore' to stop its internal state from leaking
@@ -54,9 +71,16 @@ cairo action = lift $ do
     restore
     return result
 
+-- | A 'Context' contains the environment required for rendering an
+-- expression.
 data Context = C
     { ctxGridSize :: PInt
+      -- ^ The size of one grid unit. Whenever the rendering code
+      -- specifies a coordinate, it is multiplied by this factor before
+      -- it is drawn on the screen.
     , ctxOffset   :: PInt
+      -- ^ The origin of the image. You shouldn't need to fiddle with
+      -- this directly – try 'relativeTo' instead.
     }
 
 instance Default Context where
@@ -129,23 +153,20 @@ instance RenderImpl Image where
         addOffset ctx@C{ ctxOffset = offset }
           = ctx{ ctxOffset = offset |+| delta }
 
-dumpPNG :: PInt -> Image -> IO ()
-dumpPNG size action = withImageSurface FormatRGB24 w h $ \surface -> do
+writePNG :: FilePath -> (Image, PInt) -> IO ()
+writePNG filename imagePack = withImageSurface FormatRGB24 w h $ \surface -> do
     -- Fill the background with white
     renderWith surface $ setSourceRGB 1 1 1 >> paint
     -- Render ALL the things
-    let action' = relativeTo (1 :| 1) action
-    renderWith surface $ runImage def action'
+    renderWith surface $ action
     -- Save the image
-    surfaceWriteToPNG surface "result.png"
+    surfaceWriteToPNG surface filename
   where
-    w :| h = ctxGridSize def |*| (size |+| (2 :| 2)) -- padding
+    (action, (w :| h)) = runImageWithPadding def imagePack
 
 testRender :: IO ()
-testRender = uncurry dumpPNG $ foldl step (0 :| 0, mempty) es
+testRender = writePNG "result.png" . stackHorizontally $ map render es
   where
-    step ((w :| h), image) e = ((w + w' + 1) :| (max h h'), image <> relativeTo ((w + w') :| h') image')
-      where (image', (w' :| h')) = render e
     es = map (fromRight . parseExp) $
         [ "L 0"
         , "LL 1"
