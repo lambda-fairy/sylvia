@@ -16,10 +16,12 @@ Quick start
     cabal configure
     cabal install --only-dependencies
     cabal build
-    dist/build/sylvia
+    dist/build/sylvia '\ 0 0'
 
-See [Building from source][] for more detailed instructions.
+See [Building from source][] for more detailed instructions, and
+[Examples][] for examples, of course.
 
 
 [wiki]: https://github.com/lfairy/sylvia/wiki
 [Building from source]: https://github.com/lfairy/sylvia/wiki/Building-from-source
+[Examples]: https://github.com/lfairy/sylvia/wiki/Examples
