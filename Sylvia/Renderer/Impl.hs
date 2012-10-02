@@ -130,26 +130,30 @@ render' :: RenderImpl r => Exp Integer -> Result r
 render' e = case e of
     Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0] 0
     Lam e'  -> renderLambda e'
-    App a b -> Result image size rhyme bThroatY
-      where
-        image = mconcat $
-            -- Draw the two sub-expressions
-            [ aImage
-            , bImage
-            -- Extend the shorter sub-expression so it matches up with
-            -- the bigger one
-            , extendRhyme (-aWidth) (-bWidth) bRhyme
-            -- Connect them with a vertical line
-            , drawLine (0 :| aThroatY) (0 :| bThroatY)
-            -- Application dot
-            , drawDot (0 :| bThroatY)
-            ]
-        Result aImage (aWidth :| aHeight) aRhyme aThroatY
-            = shiftY (-1 - bHeight) $ renderWithThroatLine False bWidth a
-        Result bImage (bWidth :| bHeight) bRhyme bThroatY
-            = renderWithThroatLine False 1 b
-        size = (aWidth :| aHeight + bHeight + 1)
-        rhyme = aRhyme ++ bRhyme
+    App a b -> renderAtop a b -- TODO
+
+renderAtop :: RenderImpl r => Exp Integer -> Exp Integer -> Result r
+renderAtop a b = Result image size rhyme bThroatY
+  where
+    image = mconcat $
+        -- Draw the two sub-expressions
+        [ aImage
+        , bImage
+        -- Extend the lower sub-expression so it matches up with the
+        -- bigger one
+        , relativeTo (-bWidth :| 0)
+            $ extendAcross (bWidth - aWidth) bRhyme
+        -- Connect them with a vertical line
+        , drawLine (0 :| aThroatY) (0 :| bThroatY)
+        -- Application dot
+        , drawDot (0 :| bThroatY)
+        ]
+    Result aImage (aWidth :| aHeight) aRhyme aThroatY
+        = shiftY (-1 - bHeight) $ renderWithThroatLine False bWidth a
+    Result bImage (bWidth :| bHeight) bRhyme bThroatY
+        = renderWithThroatLine False 1 b
+    size = (aWidth :| aHeight + bHeight + 1)
+    rhyme = aRhyme ++ bRhyme
 
 -- | Render an expression with a horizontal line sticking out of its
 -- throat. Doesn't sound too comfortable, to be honest.
@@ -169,6 +173,9 @@ renderWithThroatLine outerIsLam lineLength e = Result image size rhyme throatY
     throatY = if outerIsLam && containsLam e then throatY' - 1 else throatY'
     size = size' |+| (lineLength :| 0)
 
+-- | Return whether there is a nested box touching the bottom edge of the
+-- bounding box. If True, it means that everything in the image should
+-- be shifted down one unit.
 containsLam :: Exp a -> Bool
 containsLam e = case e of
     Ref _ -> False
@@ -221,10 +228,10 @@ shiftY dy (Result image size rhyme throatY)
     shiftRhyme :: RhymeUnit -> RhymeUnit
     shiftRhyme (RhymeUnit index dest) = RhymeUnit index (dest + dy)
 
-extendRhyme :: RenderImpl r => Int -> Int -> Rhyme -> r
-extendRhyme srcX destX = foldMap $ drawLine
-                                    <$> (srcX  :|) . ruDest
-                                    <*> (destX :|) . ruDest
+extendAcross :: RenderImpl r => Int -> Rhyme -> r
+extendAcross dx = foldMap $ drawLine
+                                <$> ( 0 :|) . ruDest
+                                <*> (dx :|) . ruDest
 
 -- | Take a list of images and line them up in a row.
 stackHorizontally :: RenderImpl r => [(r, PInt)] -> (r, PInt)
