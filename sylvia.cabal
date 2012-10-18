@@ -31,6 +31,8 @@ Executable sylvia
     Build-Depends:
           base   == 4.*
         , data-default
+        , data-lens
+        , data-lens-template
         , optparse-applicative == 0.4.*
         , parsec >= 3.1.2 && < 3.2
         , transformers
@@ -40,9 +42,10 @@ Executable sylvia
 
     Other-Modules:
         Sylvia.Model
-        Sylvia.Renderer.Impl
-        Sylvia.Renderer.Impl.Cairo
-        Sylvia.Renderer.Pair
+        Sylvia.Render.Backend
+        Sylvia.Render.Backend.Cairo
+        Sylvia.Render.Core
+        Sylvia.Render.Pair
         Sylvia.Text.Parser
         Sylvia.Text.PrettyPrint
         Sylvia.UI.GTK

@@ -1,5 +1,5 @@
 -- |
--- Module      : Sylvia.Renderer.Pair
+-- Module      : Sylvia.Render.Pair
 -- Copyright   : GPLv3
 --
 -- Maintainer  : chrisyco@gmail.com
@@ -7,7 +7,7 @@
 --
 -- Strict pairs, and operations on them.
 
-module Sylvia.Renderer.Pair
+module Sylvia.Render.Pair
     (
     -- * Building and dismantling pairs
       P(..)

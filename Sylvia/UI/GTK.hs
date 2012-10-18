@@ -18,8 +18,9 @@ import Graphics.UI.Gtk
 import System.IO ( hPutStr, hPutStrLn, stderr )
 
 import Sylvia.Model
-import Sylvia.Renderer.Pair
-import Sylvia.Renderer.Impl.Cairo
+import Sylvia.Render.Core
+import Sylvia.Render.Pair
+import Sylvia.Render.Backend.Cairo
 
 title :: String
 title = "Sylvia"

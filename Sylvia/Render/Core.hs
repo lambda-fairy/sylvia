@@ -1,94 +1,54 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
--- Module      : Sylvia.Renderer.Impl
+-- Module      : Sylvia.Render.Core
 -- Copyright   : GPLv3
 --
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : portable
 --
--- This module provides three things:
+-- This module provides the algorithm used to render expressions. It can
+-- be called in two ways:
 --
--- 1. An interface, 'RenderImpl', that all rendering methods must
---    implement;
+-- 1. A function, 'render', that uses "Sylvia.Render.Backend" to draw a
+--    pretty picture;
 --
--- 2. A function, 'render', that uses the aforementioned interface to
---    draw a pretty picture;
---
--- 3. Another function, 'render'', that spews its internals all over the
+-- 2. Another function, 'render'', that spews its internals all over the
 --    place.
 
-module Sylvia.Renderer.Impl
+module Sylvia.Render.Core
     (
-    -- * An interface
-      RenderImpl(..)
-
     -- * A function
-    , render
+      render
 
     -- * Another function
     , render'
-    , Result(..)
-    , Rhyme
-    , RhymeUnit(..)
 
-    -- * Miscellany
-    , stackHorizontally
+    -- ** The result type
+    , Result()
+    , resultImage
+    , resultSize
+    , resultRhyme
+    , resultThroatY
+
+    -- ** Internal bits and pieces
+    , Rhyme
+    , RhymeUnit()
+    , ruIndex
+    , ruDest
     ) where
 
 import Control.Applicative
-import Data.Foldable ( foldMap )
-import Data.List ( foldl' )
+import Data.Foldable (foldMap)
+import Data.Lens.Common
+import Data.Lens.Template
+import Data.List (foldl')
 import Data.Monoid
-import Data.Void ( Void, vacuous )
+import Data.Void (Void, vacuous)
 
+import Sylvia.Render.Backend
+import Sylvia.Render.Pair
 import Sylvia.Model
-import Sylvia.Renderer.Pair
-
--- | An action that yields an image.
---
--- 'mempty' should yield an empty image and 'mappend' should stack two
--- images together.
-class Monoid r => RenderImpl r where
-    -- | Draw a dotted rectangle.
-    drawDottedRectangle
-        :: PInt -- ^ Corner position
-        -> PInt -- ^ Size
-        -> r
-
-    -- | Draw a line segment from one point to another.
-    drawLine :: PInt -> PInt -> r
-
-    -- | Draw a line, but instead of drawing a diagonal line, draw a
-    -- zigzag instead.
-    drawZigzag :: PInt -> PInt -> r
-
-    -- | Draw a simple circle segment, centered at a point.
-    drawCircleSegment
-        :: PInt   -- ^ Center point
-        -> Double -- ^ Start angle, in radians
-        -> Double -- ^ End angle, also in radians. Radians are cool.
-        -> r
-
-    -- | Translate the given image by a vector.
-    relativeTo :: PInt -> r -> r
-
--- | Draw a full circle, centered at a point.
-drawDot :: RenderImpl r => PInt -> r
-drawDot center = drawCircleSegment center 0 (2 * pi)
-
--- | Draw a box, complete with a throat and ear.
-drawBox
-    :: RenderImpl r
-    => PInt -- ^ Top-left corner point
-    -> PInt -- ^ Size
-    -> Int  -- ^ Y offset of ear and throat
-    -> r
-drawBox corner size throatY
-    =  drawDottedRectangle corner size
-    <> drawCircleSegment (corner |+| (    0 :| height + throatY)) (1 * rightAngle) (3 * rightAngle)
-    <> drawCircleSegment (corner |+| (width :| height + throatY)) (3 * rightAngle) (1 * rightAngle)
-  where
-    width :| height = size
-    rightAngle = pi / 2
 
 type Rhyme = [RhymeUnit]
 
@@ -96,28 +56,32 @@ type Rhyme = [RhymeUnit]
 -- edge of a bounding box, connecting a variable to the sub-expression
 -- that uses it.
 data RhymeUnit = RhymeUnit
-    { ruIndex :: Integer
-    , ruDest  :: Int
+    { _ruIndex :: Integer
+    , _ruDest  :: Int
     }
   deriving (Show)
 
+$(makeLens ''RhymeUnit)
+
 -- | The result of a rendering operation.
 data Result r = Result
-    { resultImage :: r
+    { _resultImage :: r
       -- ^ The rendered image.
-    , resultSize  :: PInt
+    , _resultSize  :: PInt
       -- ^ The size of the image's bounding box in grid units, when all
       -- round things are removed.
-    , resultRhyme :: Rhyme
+    , _resultRhyme :: Rhyme
       -- ^ The expression's rhyme.
-    , resultThroatY :: Int
+    , _resultThroatY :: Int
       -- ^ The Y offset of the expression's ear and throat, measured
       -- from the /bottom/ of its bounding box.
     }
   deriving (Show)
 
+$(makeLens ''Result)
+
 -- | Render an expression, returning an image along with its size.
-render :: RenderImpl r => Exp Void -> (r, PInt)
+render :: Backend r => Exp Void -> (r, PInt)
 render e =
     let Result image size rhyme _ = render' $ vacuous e
     in case rhyme of
@@ -126,7 +90,7 @@ render e =
                         ++ "extra free variables: " ++ show rhyme
 
 -- | Render an expression, with extra juicy options.
-render' :: RenderImpl r => Exp Integer -> Result r
+render' :: Backend r => Exp Integer -> Result r
 render' e = case e of
     Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0] 0
     Lam e'  -> renderLambda e'
@@ -134,7 +98,7 @@ render' e = case e of
         Lam _ -> renderBeside a b
         _     -> renderAtop a b
 
-renderBeside :: RenderImpl r => Exp Integer -> Exp Integer -> Result r
+renderBeside :: Backend r => Exp Integer -> Exp Integer -> Result r
 renderBeside a b = Result image size rhyme aThroatY
   where
     image = mconcat $
@@ -149,16 +113,16 @@ renderBeside a b = Result image size rhyme aThroatY
     size = (aWidth + bWidth :| max aHeight bHeight)
     rhyme = aRhyme ++ bRhyme
 
-alignThroats :: RenderImpl r => Result r -> Result r -> (Result r, Result r)
+alignThroats :: Backend r => Result r -> Result r -> (Result r, Result r)
 alignThroats
-    a@(Result _ aSize _ aThroatY)
-    b@(Result _ bSize _ bThroatY)
+    a@(Result _ _ _ aThroatY)
+    b@(Result _ _ _ bThroatY)
     = (shiftY (minThroatY - aThroatY) a,
        shiftY (minThroatY - bThroatY) b)
   where
     minThroatY = min aThroatY bThroatY
 
-renderAtop :: RenderImpl r => Exp Integer -> Exp Integer -> Result r
+renderAtop :: Backend r => Exp Integer -> Exp Integer -> Result r
 renderAtop a b = Result image size rhyme bThroatY
   where
     image = mconcat $
@@ -186,18 +150,18 @@ renderAtop a b = Result image size rhyme bThroatY
 --
 -- The 'resultSize' includes the length of this extra line.
 renderWithThroatLine
-    :: RenderImpl r
+    :: Backend r
     => Bool -- ^ Whether the enclosing expression is a lambda.
     -> Int  -- ^ Length of the throat line. This should be positive.
     -> Exp Integer -> Result r
 renderWithThroatLine outerIsLam lineLength e = Result image size rhyme throatY
   where
-    Result image' size' rhyme throatY' = render' e
+    Result innerImage innerSize rhyme innerThroatY = render' e
     -- Shift the main image to the left, then draw a line next to it
-    image = relativeTo (-lineLength :| 0) image' <> throatLine
-    throatLine = drawZigzag (-lineLength :| throatY') (0 :| throatY)
-    throatY = if outerIsLam && containsLam e then throatY' - 1 else throatY'
-    size = size' |+| (lineLength :| 0)
+    image = relativeTo (-lineLength :| 0) innerImage <> throatLine
+    throatLine = drawZigzag (-lineLength :| innerThroatY) (0 :| throatY)
+    throatY = if outerIsLam && containsLam e then innerThroatY - 1 else innerThroatY
+    size = innerSize |+| (lineLength :| 0)
 
 -- | Return whether there is a nested box touching the bottom edge of the
 -- bounding box. If True, it means that everything in the image should
@@ -209,16 +173,17 @@ containsLam e = case e of
     App _ b -> containsLam b
 
 -- | Render a lambda expression.
-renderLambda :: RenderImpl r => Exp (Inc Integer) -> Result r
+renderLambda :: Backend r => Exp (Inc Integer) -> Result r
 renderLambda e' = Result image size rhyme throatY
   where
-    Result image' (innerWidth :| innerHeight) innerRhyme throatY
+    Result innerImage (innerWidth :| innerHeight) innerRhyme throatY
         = shiftY (-1) . renderWithThroatLine True 1 $ fmap shiftDown e'
+    -- Draw a box around it
     image = drawBox (negateP size) size throatY
             <> relativeTo (-width :| 0) rhymeImage
-            <> image'
+            <> innerImage
     (rhymeImage, rhyme) = renderRhyme throatY innerRhyme
-    rhymeHeight = fromInteger . maximumOr 0 $ map ruIndex innerRhyme
+    rhymeHeight = fromInteger . maximumOr 0 $ map (getL ruIndex) innerRhyme
     size@(width :| _) = (innerWidth + 1 :| (max innerHeight rhymeHeight) + 2)
 
 -- | Like 'maximum', but returns a default value on an empty list rather
@@ -228,7 +193,7 @@ maximumOr def = foldl' max def
 
 -- | Render an expression's rhyme.
 renderRhyme
-    :: RenderImpl r
+    :: Backend r
     => Int        -- ^ Throat offset (see 'resultThroatY')
     -> Rhyme      -- ^ The inner expression's rhyme
     -> (r, Rhyme) -- ^ The resulting image, along with the outer rhyme
@@ -242,33 +207,18 @@ renderRhyme throatY innerRhyme = (foldMap renderOne innerRhyme, outerRhyme)
         ]
 
 -- | Shift an image horizontally by a specified amount.
-shiftX :: RenderImpl r => Int -> Result r -> Result r
-shiftX dx (Result image size rhyme throatY)
-    = Result image' size rhyme throatY
-  where
-    image' = relativeTo (dx :| 0) image
+shiftX :: Backend r => Int -> Result r -> Result r
+shiftX dx = modL resultImage (relativeTo (dx :| 0))
 
 -- | Shift an image vertically by a specified amount, changing the rhyme
 -- and throat position to compensate.
-shiftY :: RenderImpl r => Int -> Result r -> Result r
-shiftY dy (Result image size rhyme throatY)
-    = Result image' size rhyme' throatY'
-  where
-    image' = relativeTo (0 :| dy) image
-    rhyme' = map shiftRhyme rhyme
-    throatY' = throatY + dy
+shiftY :: Backend r => Int -> Result r -> Result r
+shiftY dy
+    = modL resultImage   (relativeTo (0 :| dy))
+    . modL resultRhyme   (map (modL ruDest (+ dy)))
+    . modL resultThroatY (+ dy)
 
-    shiftRhyme :: RhymeUnit -> RhymeUnit
-    shiftRhyme (RhymeUnit index dest) = RhymeUnit index (dest + dy)
-
-extendAcross :: RenderImpl r => Int -> Rhyme -> r
+extendAcross :: Backend r => Int -> Rhyme -> r
 extendAcross dx = foldMap $ drawLine
-                                <$> ( 0 :|) . ruDest
-                                <*> (dx :|) . ruDest
-
--- | Take a list of images and line them up in a row.
-stackHorizontally :: RenderImpl r => [(r, PInt)] -> (r, PInt)
-stackHorizontally = foldr step (mempty, 0 :| 0)
-  where
-    step (image', (w' :| h')) (image, (w :| h))
-        = (relativeTo ((-w - 1) :| 0) image' <> image, (w + w' + 2) :| max h h')
+                                <$> ( 0 :|) . getL ruDest
+                                <*> (dx :|) . getL ruDest
