@@ -130,7 +130,33 @@ render' :: RenderImpl r => Exp Integer -> Result r
 render' e = case e of
     Ref x   -> Result mempty (0 :| 0) [RhymeUnit x 0] 0
     Lam e'  -> renderLambda e'
-    App a b -> renderAtop a b -- TODO
+    App a b -> case a of
+        Lam _ -> renderBeside a b
+        _     -> renderAtop a b
+
+renderBeside :: RenderImpl r => Exp Integer -> Exp Integer -> Result r
+renderBeside a b = Result image size rhyme aThroatY
+  where
+    image = mconcat $
+        [ aImage
+        , bImage
+        ]
+    (Result aImage (aWidth :| aHeight) aRhyme aThroatY,
+     Result bImage (bWidth :| bHeight) bRhyme bThroatY)
+        = alignThroats
+            (render' a)
+            (shiftX (-aWidth) $ renderWithThroatLine False 1 b)
+    size = (aWidth + bWidth :| max aHeight bHeight)
+    rhyme = aRhyme ++ bRhyme
+
+alignThroats :: RenderImpl r => Result r -> Result r -> (Result r, Result r)
+alignThroats
+    a@(Result _ aSize _ aThroatY)
+    b@(Result _ bSize _ bThroatY)
+    = (shiftY (minThroatY - aThroatY) a,
+       shiftY (minThroatY - bThroatY) b)
+  where
+    minThroatY = min aThroatY bThroatY
 
 renderAtop :: RenderImpl r => Exp Integer -> Exp Integer -> Result r
 renderAtop a b = Result image size rhyme bThroatY
@@ -214,6 +240,13 @@ renderRhyme throatY innerRhyme = (foldMap renderOne innerRhyme, outerRhyme)
         | RhymeUnit index _ <- innerRhyme
         , index > 0
         ]
+
+-- | Shift an image horizontally by a specified amount.
+shiftX :: RenderImpl r => Int -> Result r -> Result r
+shiftX dx (Result image size rhyme throatY)
+    = Result image' size rhyme throatY
+  where
+    image' = relativeTo (dx :| 0) image
 
 -- | Shift an image vertically by a specified amount, changing the rhyme
 -- and throat position to compensate.
