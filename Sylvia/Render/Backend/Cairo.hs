@@ -29,6 +29,7 @@ import Control.Applicative
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Default
+import Data.Lens.Common (getL)
 import Data.Monoid (Monoid(..))
 import Graphics.Rendering.Cairo
 
@@ -142,7 +143,7 @@ instance Backend Image where
     drawCircleSegment center start end = I $ do
         cx :| cy <- getAbsolute center
         -- A dot's diameter is approximately equal to one vertical grid unit
-        radius <- asks (fromIntegral . (`div` 2) . sndP . ctxGridSize)
+        radius <- asks (fromIntegral . (`div` 2) . getL sndP . ctxGridSize)
         cairo $ do
             newPath
             arc cx cy radius start end

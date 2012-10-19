@@ -30,6 +30,7 @@ Executable sylvia
     Main-Is:     Main.hs
     Build-Depends:
           base   == 4.*
+        , comonad-transformers
         , data-default
         , data-lens
         , data-lens-template

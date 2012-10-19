@@ -117,8 +117,8 @@ alignThroats :: Backend r => Result r -> Result r -> (Result r, Result r)
 alignThroats
     a@(Result _ _ _ aThroatY)
     b@(Result _ _ _ bThroatY)
-    = (shiftY (minThroatY - aThroatY) a,
-       shiftY (minThroatY - bThroatY) b)
+    = (shiftY' (minThroatY - aThroatY) a,
+       shiftY' (minThroatY - bThroatY) b)
   where
     minThroatY = min aThroatY bThroatY
 
@@ -165,7 +165,7 @@ renderWithThroatLine outerIsLam lineLength e = Result image size rhyme throatY
 
 -- | Return whether there is a nested box touching the bottom edge of the
 -- bounding box. If True, it means that everything in the image should
--- be shifted down one unit.
+-- be shifted down one unit, making the ear and throat lines zigzag.
 containsLam :: Exp a -> Bool
 containsLam e = case e of
     Ref _ -> False
@@ -217,6 +217,12 @@ shiftY dy
     = modL resultImage   (relativeTo (0 :| dy))
     . modL resultRhyme   (map (modL ruDest (+ dy)))
     . modL resultThroatY (+ dy)
+
+-- | Like 'shiftY', but expand the image's bounding box rather than shifting it.
+shiftY' :: Backend r => Int -> Result r -> Result r
+shiftY' dy
+    = modL resultSize (modL sndP (subtract dy)) -- dy is usually negative, so this /increases/ the size
+    . shiftY dy
 
 extendAcross :: Backend r => Int -> Rhyme -> r
 extendAcross dx = foldMap $ drawLine

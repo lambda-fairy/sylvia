@@ -26,6 +26,8 @@ module Sylvia.Render.Pair
     ) where
 
 import Control.Applicative
+import Control.Comonad.Trans.Store
+import Data.Lens.Common
 
 -- | A strict pair.
 data P a = !a :| !a
@@ -62,10 +64,10 @@ negateP = fmap negate
 fromIntegralP :: (Integral a, Num b) => P a -> P b
 fromIntegralP = fmap fromIntegral
 
--- | Get the first element of a pair.
-fstP :: P a -> a
-fstP (x :| _) = x
+-- | Lens on the first element.
+fstP :: Lens (P a) a
+fstP = Lens $ \(x :| y) -> store (\x' -> x' :| y) x
 
--- | Get the second element of a pair.
-sndP :: P a -> a
-sndP (_ :| y) = y
+-- | Lens on the second element.
+sndP :: Lens (P a) a
+sndP = Lens $ \(x :| y) -> store (\y' -> x :| y') y
