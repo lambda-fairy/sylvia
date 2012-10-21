@@ -1,13 +1,13 @@
 -- |
--- Module      : Sylvia.Renderer.Impl.Cairo
+-- Module      : Sylvia.Render.Backend.Cairo
 -- Copyright   : GPLv3
 --
 -- Maintainer  : chrisyco@gmail.com
 -- Portability : non-portable (requires FFI)
 --
--- Renderer using the Cairo graphics library.
+-- Render using the Cairo graphics library.
 
-module Sylvia.Renderer.Impl.Cairo
+module Sylvia.Render.Backend.Cairo
     (
     -- * Types
       Image
@@ -22,18 +22,20 @@ module Sylvia.Renderer.Impl.Cairo
     , testRender
 
     -- * Re-exports
-    , module Sylvia.Renderer.Impl
+    , module Sylvia.Render.Backend
     ) where
 
 import Control.Applicative
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Default
+import Data.Lens.Common (getL)
 import Data.Monoid (Monoid(..))
 import Graphics.Rendering.Cairo
 
-import Sylvia.Renderer.Impl
-import Sylvia.Renderer.Pair
+import Sylvia.Render.Backend
+import Sylvia.Render.Core (render)
+import Sylvia.Render.Pair
 import Sylvia.Text.Parser
 
 newtype Image = I { unI :: ImageM () }
@@ -104,7 +106,7 @@ instance Monoid Image where
     mempty = I $ return ()
     I a `mappend` I b = I $ a >> b
 
-instance RenderImpl Image where
+instance Backend Image where
     drawDottedRectangle corner size = I $ do
         x  :| y  <- addHalf <$> getAbsolute corner
         dx :| dy <- getRelative size
@@ -141,7 +143,7 @@ instance RenderImpl Image where
     drawCircleSegment center start end = I $ do
         cx :| cy <- getAbsolute center
         -- A dot's diameter is approximately equal to one vertical grid unit
-        radius <- asks (fromIntegral . (`div` 2) . sndP . ctxGridSize)
+        radius <- asks (fromIntegral . (`div` 2) . getL sndP . ctxGridSize)
         cairo $ do
             newPath
             arc cx cy radius start end

@@ -6,7 +6,8 @@ module Main
 
 import Options.Applicative
 
-import Sylvia.Renderer.Impl.Cairo
+import Sylvia.Render.Core
+import Sylvia.Render.Backend.Cairo
 import Sylvia.Text.Parser
 import Sylvia.UI.GTK
 
